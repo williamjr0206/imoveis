@@ -1,0 +1,20 @@
+<?php
+$hostAtual = $_SERVER['HTTP_HOST'] ?? '';
+
+$ambiente = (
+    $hostAtual === 'meu_projeto.local' ||
+    $hostAtual === 'localhost'
+) ? 'local' : 'prod';
+
+$config = require __DIR__ . "/database.$ambiente.php";
+
+$conn = new mysqli(
+    $config['host'],
+    $config['user'],
+    $config['pass'],
+    $config['db']
+);
+
+if ($conn->connect_error) {
+    die("Erro de conexão com o banco");
+}

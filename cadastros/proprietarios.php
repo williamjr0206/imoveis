@@ -1,5 +1,5 @@
 <?php
-require __DIR__ . '/../config/db.php';
+require __DIR__ . '/../config/database.php';
 require __DIR__ . '/../config/auth.php';
 
 verificaPerfil(['ADMIN','OPERADOR']);

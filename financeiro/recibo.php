@@ -1,6 +1,6 @@
 <?php
-require '__DIR__/../vendor/fpdf/fpdf.php';
-require '__DIR__/../config/db.php';
+require __DIR__.'/../vendor/fpdf/fpdf.php';
+require __DIR__.'/../config/db.php';
 
 $id = $_GET['id'];
 

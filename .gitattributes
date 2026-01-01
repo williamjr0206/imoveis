@@ -1,2 +1,3 @@
 config/db.php
 vendor/fpdf/
+config/database.local.php
