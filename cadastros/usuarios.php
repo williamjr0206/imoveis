@@ -1,25 +1,48 @@
 <?php
+session_start();
 require __DIR__ . '/../config/database.php';
 require __DIR__ . '/../config/auth.php';
+
 verificaPerfil(['ADMIN']);
 
-// salvar
-if ($_POST) {
-    $nome   = $_POST['nome'];
-    $email  = $_POST['email'];
-    $perfil = $_POST['perfil'];
+/* =========================
+   SALVAR USUÁRIO
+========================= */
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+
+    $nome   = $_POST['nome']   ?? '';
+    $email  = $_POST['email']  ?? '';
+    $perfil = $_POST['perfil'] ?? '';
     $senha  = password_hash($_POST['senha'], PASSWORD_DEFAULT);
 
-    $sql = $pdo->prepare("
-        INSERT INTO usuarios (nome, email, senha, perfil)
-        VALUES (?, ?, ?, ?)
-    ");
-    $sql->execute([$nome, $email, $senha, $perfil]);
+    $stmt = $conn->prepare(
+        "INSERT INTO usuarios (nome, email, senha, perfil, ativo)
+         VALUES (?, ?, ?, ?, 1)"
+    );
+
+    $stmt->bind_param("ssss", $nome, $email, $senha, $perfil);
+    $stmt->execute();
 }
 
-// listar
-$usuarios = $pdo->query("SELECT id, nome, email, perfil, ativo FROM usuarios")->fetchAll();
+/* =========================
+   LISTAR USUÁRIOS
+========================= */
+$result = $conn->query(
+    "SELECT id, nome, email, perfil, ativo
+     FROM usuarios
+     ORDER BY nome"
+);
+
+$usuarios = $result->fetch_all(MYSQLI_ASSOC);
 ?>
+
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <title>Usuários</title>
+</head>
+<body>
 
 <h2>Usuários</h2>
 
@@ -50,8 +73,8 @@ $usuarios = $pdo->query("SELECT id, nome, email, perfil, ativo FROM usuarios")->
 
 <?php foreach ($usuarios as $u): ?>
 <tr>
-    <td><?= $u['nome'] ?></td>
-    <td><?= $u['email'] ?></td>
+    <td><?= htmlspecialchars($u['nome']) ?></td>
+    <td><?= htmlspecialchars($u['email']) ?></td>
     <td><?= $u['perfil'] ?></td>
     <td><?= $u['ativo'] ? 'Ativo' : 'Inativo' ?></td>
     <td>
@@ -62,3 +85,6 @@ $usuarios = $pdo->query("SELECT id, nome, email, perfil, ativo FROM usuarios")->
 </tr>
 <?php endforeach; ?>
 </table>
+
+</body>
+</html>

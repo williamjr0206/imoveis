@@ -8,13 +8,12 @@ verificaPerfil(['ADMIN']);
 $id = $_GET['id'] ?? 0;
 
 $stmt = $conn->prepare(
-    "UPDATE usuarios
-     SET ativo = IF(ativo = 1, 0, 1)
-     WHERE id = ?"
+    "UPDATE inquilinos
+     SET ativo = IF(ativo=1,0,1)
+     WHERE id=?"
 );
-
 $stmt->bind_param("i", $id);
 $stmt->execute();
 
-header("Location: usuarios.php");
+header("Location: inquilinos.php");
 exit;
