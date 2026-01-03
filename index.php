@@ -1,69 +1,65 @@
 <?php
 session_start();
 
+require __DIR__ . '/config/database.php';
+require __DIR__ . '/config/auth.php';
+
+// garante que está logado
 if (!isset($_SESSION['usuario_id'])) {
     header("Location: login.php");
     exit;
 }
-
-$nome   = $_SESSION['nome'];
-$perfil = $_SESSION['perfil'];
 ?>
-
 <!DOCTYPE html>
 <html lang="pt-br">
 <head>
     <meta charset="UTF-8">
-    <title>Painel Principal</title>
+    <title>Painel - Imóveis</title>
     <style>
-        body { font-family: Arial; margin: 30px; }
-        h2 { margin-bottom: 20px; }
+        body {
+            font-family: Arial, sans-serif;
+            margin: 30px;
+        }
+        h2 {
+            margin-bottom: 10px;
+        }
         .menu a {
             display: inline-block;
-            margin: 5px 10px 5px 0;
+            margin: 6px 10px 6px 0;
             padding: 10px 15px;
-            background: #f2f2f2;
-            border-radius: 5px;
+            background: #f0f0f0;
             text-decoration: none;
+            border-radius: 4px;
             color: #000;
-            border: 1px solid #ccc;
         }
         .menu a:hover {
-            background: #e0e0e0;
+            background: #ddd;
         }
-        .perfil {
-            margin-bottom: 20px;
-            color: #555;
+        .logout {
+            margin-top: 30px;
         }
     </style>
 </head>
 <body>
 
-<h2>Bem-vindo, <?= htmlspecialchars($nome) ?></h2>
-<div class="perfil">
-    Perfil: <strong><?= htmlspecialchars($perfil) ?></strong>
-</div>
+<h2>Bem-vindo, <?= htmlspecialchars($_SESSION['nome']) ?></h2>
+<p>Perfil: <strong><?= $_SESSION['perfil'] ?></strong></p>
 
 <div class="menu">
-
-    <!-- ADMIN -->
-    <?php if ($perfil === 'ADMIN'): ?>
+    <?php if ($_SESSION['perfil'] === 'ADMIN'): ?>
         <a href="cadastros/usuarios.php">👤 Usuários</a>
     <?php endif; ?>
 
-    <!-- ADMIN e OPERADOR -->
-    <?php if (in_array($perfil, ['ADMIN','OPERADOR'])): ?>
-        <a href="cadastros/proprietarios.php">🏠 Proprietários</a>
-        <a href="cadastros/imoveis.php">🏢 Imóveis</a>
-        <a href="cadastros/contratos.php">📄 Contratos</a>
-        <a href="cadastros/inquilinos.php">🧍 Inquilinos</a>
-    <?php endif; ?>
-
+    <a href="cadastros/proprietarios.php">🏠 Proprietários</a>
+    <a href="cadastros/imoveis.php">🏢 Imóveis</a>
+    <a href="cadastros/inquilinos.php">👥 Inquilinos</a>
+    <a href="cadastros/contratos.php">📄 Contratos</a>
+    <a href="cadastros/pagamentos.php">💰 Pagamentos</a>
 </div>
 
-<hr>
-
-<a href="logout.php">Sair</a>
+<div class="logout">
+    <a href="logout.php">🚪 Sair</a>
+</div>
 
 </body>
 </html>

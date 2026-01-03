@@ -1,6 +1,8 @@
 <?php
 require __DIR__ . '/../config/database.php';
 require __DIR__ . '/../config/auth.php';
+require __DIR__ . '/../includes/menu.php';
+
 
 verificaPerfil(['ADMIN','OPERADOR']);
 
@@ -8,36 +10,51 @@ verificaPerfil(['ADMIN','OPERADOR']);
    1) SALVAR / EDITAR
 ===================== */
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+
     $id              = $_POST['id'] ?? null;
     $proprietario_id = $_POST['proprietario_id'];
     $descricao       = $_POST['descricao'];
     $tipo            = $_POST['tipo'];
     $endereco        = $_POST['endereco'];
     $valor_aluguel   = $_POST['valor_aluguel'];
-    $ativo           = isset($_POST['ativo']) ? 1 : 0;
+    $status = $_POST['status'];
+
 
     if ($id) {
         // EDITAR
-        $sql = $pdo->prepare("
-            UPDATE imoveis
-            SET proprietario_id = ?, descricao = ?, tipo = ?, endereco = ?, valor_aluguel = ?, ativo = ?
-            WHERE id = ?
-        ");
-        $sql->execute([
-            $proprietario_id, $descricao, $tipo,
-            $endereco, $valor_aluguel, $ativo, $id
-        ]);
+$stmt = $conn->prepare("
+    UPDATE imoveis
+    SET proprietario_id = ?, descricao = ?, tipo = ?, endereco = ?, valor_aluguel = ?, status = ?
+    WHERE id = ?
+");
+$stmt->bind_param(
+    "isssdsi",
+    $proprietario_id,
+    $descricao,
+    $tipo,
+    $endereco,
+    $valor_aluguel,
+    $status,
+    $id
+);
+$stmt->execute();
     } else {
         // SALVAR
-        $sql = $pdo->prepare("
-            INSERT INTO imoveis
-            (proprietario_id, descricao, tipo, endereco, valor_aluguel, ativo)
-            VALUES (?, ?, ?, ?, ?, ?)
-        ");
-        $sql->execute([
-            $proprietario_id, $descricao, $tipo,
-            $endereco, $valor_aluguel, $ativo
-        ]);
+$stmt = $conn->prepare("
+    INSERT INTO imoveis
+    (proprietario_id, descricao, tipo, endereco, valor_aluguel, status)
+    VALUES (?, ?, ?, ?, ?, ?)
+");
+$stmt->bind_param(
+    "isssds",
+    $proprietario_id,
+    $descricao,
+    $tipo,
+    $endereco,
+    $valor_aluguel,
+    $status
+);
+        $stmt->execute();
     }
 
     header("Location: imoveis.php");
@@ -48,10 +65,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
    2) EXCLUIR
 ===================== */
 if (isset($_GET['delete'])) {
+
     verificaPerfil(['ADMIN']);
 
-    $sql = $pdo->prepare("DELETE FROM imoveis WHERE id = ?");
-    $sql->execute([$_GET['delete']]);
+    $stmt = $conn->prepare("DELETE FROM imoveis WHERE id = ?");
+    $stmt->bind_param("i", $_GET['delete']);
+    $stmt->execute();
 
     header("Location: imoveis.php");
     exit;
@@ -62,27 +81,35 @@ if (isset($_GET['delete'])) {
 ===================== */
 $editar = null;
 if (isset($_GET['edit'])) {
-    $sql = $pdo->prepare("SELECT * FROM imoveis WHERE id = ?");
-    $sql->execute([$_GET['edit']]);
-    $editar = $sql->fetch();
+
+    $stmt = $conn->prepare("SELECT * FROM imoveis WHERE id = ?");
+    $stmt->bind_param("i", $_GET['edit']);
+    $stmt->execute();
+    $editar = $stmt->get_result()->fetch_assoc();
 }
 
 /* =====================
-   4) LISTAR PROPRIETÁRIOS (SELECT)
+   4) LISTAR PROPRIETÁRIOS
 ===================== */
-$proprietarios = $pdo
-    ->query("SELECT id, nome FROM proprietarios ORDER BY nome")
-    ->fetchAll();
+$proprietarios = [];
+$result = $conn->query("SELECT id, nome FROM proprietarios ORDER BY nome");
+while ($row = $result->fetch_assoc()) {
+    $proprietarios[] = $row;
+}
 
 /* =====================
    5) LISTAR IMÓVEIS
 ===================== */
-$imoveis = $pdo->query("
+$imoveis = [];
+$result = $conn->query("
     SELECT i.*, p.nome AS proprietario
     FROM imoveis i
     JOIN proprietarios p ON p.id = i.proprietario_id
     ORDER BY p.nome
-")->fetchAll();
+");
+while ($row = $result->fetch_assoc()) {
+    $imoveis[] = $row;
+}
 ?>
 
 <!DOCTYPE html>
@@ -119,31 +146,26 @@ $imoveis = $pdo->query("
     </select>
 
     <label>Descrição</label>
-    <input name="descricao" required
-           value="<?= $editar['descricao'] ?? '' ?>">
+    <input name="descricao" required value="<?= $editar['descricao'] ?? '' ?>">
 
     <label>Tipo</label>
-    <input name="tipo"
-           placeholder="Casa, Apto, Sala..."
-           value="<?= $editar['tipo'] ?? '' ?>">
+    <input name="tipo" value="<?= $editar['tipo'] ?? '' ?>">
 
     <label>Endereço</label>
-    <input name="endereco"
-           value="<?= $editar['endereco'] ?? '' ?>">
+    <input name="endereco" value="<?= $editar['endereco'] ?? '' ?>">
 
     <label>Valor do Aluguel (R$)</label>
     <input type="number" step="0.01" name="valor_aluguel"
            value="<?= $editar['valor_aluguel'] ?? '' ?>">
 
-    <label>
-        <input type="checkbox" name="ativo"
-            <?= (!$editar || $editar['ativo']) ? 'checked' : '' ?>>
-        Ativo
-    </label>
+    <label>Status</label>
+<select name="status" required>
+    <option value="ATIVO" <?= ($editar['status'] ?? '') === 'ATIVO' ? 'selected' : '' ?>>Ativo</option>
+    <option value="LOCADO" <?= ($editar['status'] ?? '') === 'LOCADO' ? 'selected' : '' ?>>Locado</option>
+    <option value="INATIVO" <?= ($editar['status'] ?? '') === 'INATIVO' ? 'selected' : '' ?>>Inativo</option>
+</select>
 
-    <button type="submit">
-        <?= $editar ? 'Atualizar' : 'Salvar' ?>
-    </button>
+    <button type="submit"><?= $editar ? 'Atualizar' : 'Salvar' ?></button>
 
     <?php if ($editar): ?>
         <a href="imoveis.php">Cancelar</a>
@@ -170,7 +192,9 @@ $imoveis = $pdo->query("
             <td><?= htmlspecialchars($i['tipo']) ?></td>
             <td><?= htmlspecialchars($i['endereco']) ?></td>
             <td><?= number_format($i['valor_aluguel'], 2, ',', '.') ?></td>
-            <td><?= $i['ativo'] ? 'Ativo' : 'Inativo' ?></td>
+            <td><?= $i['status'] === 'ATIVO' ? 'Ativo' : $i['status'] ?>
+</td>
+
             <td>
                 <a href="imoveis.php?edit=<?= $i['id'] ?>">Editar</a>
                 <a href="imoveis.php?delete=<?= $i['id'] ?>"

@@ -1,69 +1,82 @@
 <?php
+ini_set('display_errors', 1);
+error_reporting(E_ALL);
+
 require __DIR__ . '/../config/database.php';
 require __DIR__ . '/../config/auth.php';
+require __DIR__ . '/../includes/menu.php';
 
 verificaPerfil(['ADMIN','OPERADOR']);
 
 /* =====================
-   1) SALVAR / EDITAR
+   SALVAR / EDITAR
 ===================== */
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+
     $id       = $_POST['id'] ?? null;
-    $nome     = $_POST['nome'];
-    $cpf      = $_POST['cpf'];
-    $telefone = $_POST['telefone'];
-    $email    = $_POST['email'];
+    $nome     = $_POST['nome'] ?? '';
+    $cpf      = $_POST['cpf'] ?? '';
+    $telefone = $_POST['telefone'] ?? '';
+    $email    = $_POST['email'] ?? '';
 
     if ($id) {
-        // EDITAR
-        $sql = $pdo->prepare("
+        $stmt = $conn->prepare("
             UPDATE proprietarios
             SET nome = ?, cpf = ?, telefone = ?, email = ?
             WHERE id = ?
         ");
-        $sql->execute([$nome, $cpf, $telefone, $email, $id]);
+        $stmt->bind_param("ssssi", $nome, $cpf, $telefone, $email, $id);
     } else {
-        // SALVAR
-        $sql = $pdo->prepare("
+        $stmt = $conn->prepare("
             INSERT INTO proprietarios (nome, cpf, telefone, email)
             VALUES (?, ?, ?, ?)
         ");
-        $sql->execute([$nome, $cpf, $telefone, $email]);
+        $stmt->bind_param("ssss", $nome, $cpf, $telefone, $email);
     }
 
+    $stmt->execute();
     header("Location: proprietarios.php");
     exit;
 }
 
 /* =====================
-   2) EXCLUIR
+   EXCLUIR
 ===================== */
 if (isset($_GET['delete'])) {
-    verificaPerfil(['ADMIN']); // somente admin exclui
 
-    $sql = $pdo->prepare("DELETE FROM proprietarios WHERE id = ?");
-    $sql->execute([$_GET['delete']]);
+    verificaPerfil(['ADMIN']);
+
+    $stmt = $conn->prepare("DELETE FROM proprietarios WHERE id = ?");
+    $stmt->bind_param("i", $_GET['delete']);
+    $stmt->execute();
 
     header("Location: proprietarios.php");
     exit;
 }
 
 /* =====================
-   3) CARREGAR PARA EDIÇÃO
+   EDITAR
 ===================== */
 $editar = null;
+
 if (isset($_GET['edit'])) {
-    $sql = $pdo->prepare("SELECT * FROM proprietarios WHERE id = ?");
-    $sql->execute([$_GET['edit']]);
-    $editar = $sql->fetch();
+    $stmt = $conn->prepare("SELECT * FROM proprietarios WHERE id = ?");
+    $stmt->bind_param("i", $_GET['edit']);
+    $stmt->execute();
+    $editar = $stmt->get_result()->fetch_assoc();
 }
 
 /* =====================
-   4) LISTAR
+   LISTAR
 ===================== */
-$proprietarios = $pdo
-    ->query("SELECT * FROM proprietarios ORDER BY nome")
-    ->fetchAll();
+$proprietarios = [];
+
+$result = $conn->query("SELECT * FROM proprietarios ORDER BY nome");
+if ($result) {
+    while ($row = $result->fetch_assoc()) {
+        $proprietarios[] = $row;
+    }
+}
 ?>
 
 <!DOCTYPE html>
@@ -74,7 +87,7 @@ $proprietarios = $pdo
     <style>
         body { font-family: Arial; margin: 20px; }
         form { margin-bottom: 30px; }
-        input { margin: 5px 0; padding: 5px; width: 300px; display: block; }
+        input { margin: 5px 0; padding: 6px; width: 300px; display: block; }
         table { border-collapse: collapse; width: 100%; }
         th, td { border: 1px solid #ccc; padding: 8px; }
         th { background: #eee; }
@@ -89,24 +102,18 @@ $proprietarios = $pdo
     <input type="hidden" name="id" value="<?= $editar['id'] ?? '' ?>">
 
     <label>Nome</label>
-    <input name="nome" required
-           value="<?= $editar['nome'] ?? '' ?>">
+    <input name="nome" required value="<?= htmlspecialchars($editar['nome'] ?? '') ?>">
 
     <label>CPF</label>
-    <input name="cpf"
-           value="<?= $editar['cpf'] ?? '' ?>">
+    <input name="cpf" value="<?= htmlspecialchars($editar['cpf'] ?? '') ?>">
 
     <label>Telefone</label>
-    <input name="telefone"
-           value="<?= $editar['telefone'] ?? '' ?>">
+    <input name="telefone" value="<?= htmlspecialchars($editar['telefone'] ?? '') ?>">
 
     <label>E-mail</label>
-    <input type="email" name="email"
-           value="<?= $editar['email'] ?? '' ?>">
+    <input type="email" name="email" value="<?= htmlspecialchars($editar['email'] ?? '') ?>">
 
-    <button type="submit">
-        <?= $editar ? 'Atualizar' : 'Salvar' ?>
-    </button>
+    <button type="submit"><?= $editar ? 'Atualizar' : 'Salvar' ?></button>
 
     <?php if ($editar): ?>
         <a href="proprietarios.php">Cancelar</a>
@@ -132,9 +139,8 @@ $proprietarios = $pdo
             <td><?= htmlspecialchars($p['email']) ?></td>
             <td>
                 <a href="proprietarios.php?edit=<?= $p['id'] ?>">Editar</a>
-
                 <a href="proprietarios.php?delete=<?= $p['id'] ?>"
-                   onclick="return confirm('Tem certeza que deseja excluir este proprietário?')">
+                   onclick="return confirm('Deseja excluir este proprietário?')">
                    Excluir
                 </a>
             </td>

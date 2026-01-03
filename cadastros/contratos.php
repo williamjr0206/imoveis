@@ -1,35 +1,47 @@
 <?php
+ini_set('display_errors', 1);
+ini_set('display_startup_errors', 1);
+error_reporting(E_ALL);
+
 require __DIR__ . '/../config/database.php';
 require __DIR__ . '/../config/auth.php';
+require __DIR__ . '/../includes/menu.php';
 
 verificaPerfil(['ADMIN','OPERADOR']);
 
 /* =====================
-   1) SALVAR / EDITAR
+   VARIÁVEIS PADRÃO
+===================== */
+$id             = $_POST['id']            ?? null;
+$imovel_id      = $_POST['imovel_id']     ?? null;
+$inquilino_id   = $_POST['inquilino_id']  ?? null;
+$data_inicio    = $_POST['data_inicio']   ?? null;
+$data_fim       = $_POST['data_fim']      ?? null;
+$valor_aluguel  = $_POST['valor_aluguel'] ?? null;
+$dia_vencimento = $_POST['dia_vencimento']?? null;
+$ativo          = isset($_POST['ativo']) ? 1 : 0;
+
+/* =====================
+   SALVAR / EDITAR
 ===================== */
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
-    $id             = $_POST['id'] ?? null;
-    $imovel_id      = $_POST['imovel_id'];
-    $inquilino      = $_POST['inquilino'];
-    $data_inicio    = $_POST['data_inicio'];
-    $data_fim       = $_POST['data_fim'];
-    $valor_aluguel  = $_POST['valor_aluguel'];
-    $dia_vencimento = $_POST['dia_vencimento'];
-    $ativo          = isset($_POST['ativo']) ? 1 : 0;
-
     if ($id) {
-        // EDITAR
         $stmt = $conn->prepare("
-            UPDATE contratos
-            SET imovel_id = ?, inquilino = ?, data_inicio = ?, data_fim = ?,
-                valor_aluguel = ?, dia_vencimento = ?, ativo = ?
+            UPDATE contratos SET
+                imovel_id = ?,
+                inquilino_id = ?,
+                data_inicio = ?,
+                data_fim = ?,
+                valor_aluguel = ?,
+                dia_vencimento = ?,
+                ativo = ?
             WHERE id = ?
         ");
         $stmt->bind_param(
-            "isssdiii",
+            "iissdiii",
             $imovel_id,
-            $inquilino,
+            $inquilino_id,
             $data_inicio,
             $data_fim,
             $valor_aluguel,
@@ -37,30 +49,32 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $ativo,
             $id
         );
-        $stmt->execute();
     } else {
-        // SALVAR
         $stmt = $conn->prepare("
             INSERT INTO contratos
-            (imovel_id, inquilino, data_inicio, data_fim, valor_aluguel, dia_vencimento, ativo)
+            (imovel_id, inquilino_id, data_inicio, data_fim, valor_aluguel, dia_vencimento, ativo)
             VALUES (?, ?, ?, ?, ?, ?, ?)
         ");
         $stmt->bind_param(
-            "isssdii",
+            "iissdii",
             $imovel_id,
-            $inquilino,
+            $inquilino_id,
             $data_inicio,
             $data_fim,
             $valor_aluguel,
             $dia_vencimento,
             $ativo
         );
-        $stmt->execute();
     }
 
+    $stmt->execute();
     header("Location: contratos.php");
     exit;
 }
+
+/* =====================
+   EXCLUIR
+===================== */
 if (isset($_GET['delete'])) {
     verificaPerfil(['ADMIN']);
 
@@ -71,6 +85,10 @@ if (isset($_GET['delete'])) {
     header("Location: contratos.php");
     exit;
 }
+
+/* =====================
+   EDITAR
+===================== */
 $editar = null;
 if (isset($_GET['edit'])) {
     $stmt = $conn->prepare("SELECT * FROM contratos WHERE id = ?");
@@ -78,9 +96,14 @@ if (isset($_GET['edit'])) {
     $stmt->execute();
     $editar = $stmt->get_result()->fetch_assoc();
 }
+
+/* =====================
+   LISTA DE IMÓVEIS
+===================== */
 $imoveis = [];
 $result = $conn->query("
-    SELECT i.id, CONCAT(p.nome, ' - ', i.descricao) AS imovel
+    SELECT i.id,
+           CONCAT(p.nome, ' - ', i.descricao) AS imovel
     FROM imoveis i
     JOIN proprietarios p ON p.id = i.proprietario_id
     WHERE i.ativo = 1
@@ -90,12 +113,32 @@ $result = $conn->query("
 while ($row = $result->fetch_assoc()) {
     $imoveis[] = $row;
 }
+
+/* =====================
+   LISTA DE INQUILINOS
+===================== */
+$inquilinos = [];
+$result = $conn->query("
+    SELECT id, nome
+    FROM inquilinos
+    ORDER BY nome
+");
+
+while ($row = $result->fetch_assoc()) {
+    $inquilinos[] = $row;
+}
+
+/* =====================
+   LISTA DE CONTRATOS
+===================== */
 $contratos = [];
 $result = $conn->query("
-    SELECT c.*, 
+    SELECT c.*,
+           iq.nome AS inquilino,
            CONCAT(p.nome, ' - ', i.descricao) AS imovel
     FROM contratos c
-    JOIN imoveis i ON i.id = c.imovel_id
+    JOIN inquilinos iq   ON iq.id = c.inquilino_id
+    JOIN imoveis i       ON i.id = c.imovel_id
     JOIN proprietarios p ON p.id = i.proprietario_id
     ORDER BY c.data_inicio DESC
 ");

@@ -2,6 +2,8 @@
 session_start();
 require __DIR__ . '/../config/database.php';
 require __DIR__ . '/../config/auth.php';
+require __DIR__ . '/../includes/menu.php';
+
 
 verificaPerfil(['ADMIN','OPERADOR']);
 

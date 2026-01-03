@@ -1,6 +1,7 @@
 <?php
 require __DIR__ . '/../config/database.php';
 require __DIR__ . '/../config/auth.php';
+require __DIR__ . '/../includes/menu.php';
 
 verificaPerfil(['ADMIN','OPERADOR']);
 
@@ -18,27 +19,39 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     if ($id) {
         // EDITAR
-        $sql = $pdo->prepare("
+        $stmt = $conn->prepare("
             UPDATE pagamentos
             SET contrato_id = ?, mes_referencia = ?, valor_pago = ?,
                 data_pagamento = ?, status = ?
             WHERE id = ?
         ");
-        $sql->execute([
-            $contrato_id, $mes_referencia, $valor_pago,
-            $data_pagamento, $status, $id
-        ]);
+        $stmt->bind_param(
+            "isdssi",
+            $contrato_id,
+            $mes_referencia,
+            $valor_pago,
+            $data_pagamento,
+            $status,
+            $id
+        );
+        $stmt->execute();
     } else {
         // SALVAR
-        $sql = $pdo->prepare("
+        $stmt = $conn->prepare("
             INSERT INTO pagamentos
             (contrato_id, mes_referencia, valor_pago, data_pagamento, status, criado_por)
             VALUES (?, ?, ?, ?, ?, ?)
         ");
-        $sql->execute([
-            $contrato_id, $mes_referencia, $valor_pago,
-            $data_pagamento, $status, $criado_por
-        ]);
+        $stmt->bind_param(
+            "isdssi",
+            $contrato_id,
+            $mes_referencia,
+            $valor_pago,
+            $data_pagamento,
+            $status,
+            $criado_por
+        );
+        $stmt->execute();
     }
 
     header("Location: pagamentos.php");
@@ -51,8 +64,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 if (isset($_GET['delete'])) {
     verificaPerfil(['ADMIN']);
 
-    $sql = $pdo->prepare("DELETE FROM pagamentos WHERE id = ?");
-    $sql->execute([$_GET['delete']]);
+    $stmt = $conn->prepare("DELETE FROM pagamentos WHERE id = ?");
+    $stmt->bind_param("i", $_GET['delete']);
+    $stmt->execute();
 
     header("Location: pagamentos.php");
     exit;
@@ -63,40 +77,64 @@ if (isset($_GET['delete'])) {
 ===================== */
 $editar = null;
 if (isset($_GET['edit'])) {
-    $sql = $pdo->prepare("SELECT * FROM pagamentos WHERE id = ?");
-    $sql->execute([$_GET['edit']]);
-    $editar = $sql->fetch();
+    $stmt = $conn->prepare("SELECT * FROM pagamentos WHERE id = ?");
+    $stmt->bind_param("i", $_GET['edit']);
+    $stmt->execute();
+    $editar = $stmt->get_result()->fetch_assoc();
 }
 
 /* =====================
    4) LISTAR CONTRATOS (SELECT)
 ===================== */
-$contratos = $pdo->query("
+$contratos = [];
+$result = $conn->query("
     SELECT c.id,
-           CONCAT(p.nome, ' - ', i.descricao, ' (', c.inquilino, ')') AS contrato
+           CONCAT(
+               p.nome, ' - ',
+               i.descricao, ' (',
+               iq.nome, ')'
+           ) AS contrato
     FROM contratos c
-    JOIN imoveis i ON i.id = c.imovel_id
+    JOIN imoveis i       ON i.id = c.imovel_id
     JOIN proprietarios p ON p.id = i.proprietario_id
+    JOIN inquilinos iq   ON iq.id = c.inquilino_id
     WHERE c.ativo = 1
     ORDER BY p.nome
-")->fetchAll();
+");
+
+$contratos = [];
+while ($row = $result->fetch_assoc()) {
+    $contratos[] = $row;
+}
+while ($row = $result->fetch_assoc()) {
+    $contratos[] = $row;
+}
 
 /* =====================
    5) LISTAR PAGAMENTOS
 ===================== */
-$pagamentos = $pdo->query("
+$pagamentos = [];
+$result = $conn->query("
     SELECT pg.*,
-           c.inquilino,
+           iq.nome AS inquilino,
            i.descricao AS imovel,
            p.nome AS proprietario
     FROM pagamentos pg
-    JOIN contratos c ON c.id = pg.contrato_id
-    JOIN imoveis i ON i.id = c.imovel_id
+    JOIN contratos c     ON c.id = pg.contrato_id
+    JOIN inquilinos iq   ON iq.id = c.inquilino_id
+    JOIN imoveis i       ON i.id = c.imovel_id
     JOIN proprietarios p ON p.id = i.proprietario_id
     ORDER BY pg.mes_referencia DESC
-")->fetchAll();
-?>
+");
 
+$pagamentos = [];
+while ($row = $result->fetch_assoc()) {
+    $pagamentos[] = $row;
+}
+while ($row = $result->fetch_assoc()) {
+    $pagamentos[] = $row;
+}
+?>
 <!DOCTYPE html>
 <html lang="pt-br">
 <head>
@@ -144,10 +182,7 @@ $pagamentos = $pdo->query("
 
     <label>Status</label>
     <select name="status">
-        <?php
-        $statusList = ['PAGO','ATRASADO','PENDENTE'];
-        foreach ($statusList as $s):
-        ?>
+        <?php foreach (['PAGO','ATRASADO','PENDENTE'] as $s): ?>
             <option value="<?= $s ?>"
                 <?= ($editar && $editar['status'] == $s) ? 'selected' : '' ?>>
                 <?= $s ?>
