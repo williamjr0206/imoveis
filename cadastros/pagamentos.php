@@ -1,6 +1,5 @@
 <?php
 ini_set('display_errors', 1);
-ini_set('display_startup_errors', 1);
 error_reporting(E_ALL);
 
 require __DIR__ . '/../config/database.php';
@@ -20,7 +19,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $valor_pago     = $_POST['valor_pago'];
     $data_pagamento = $_POST['data_pagamento'] ?: null;
     $status         = $_POST['status'];
-    $criado_por     = $_SESSION['usuario_id'];
 
     if ($id) {
         // EDITAR
@@ -43,17 +41,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         // INSERIR
         $stmt = $conn->prepare("
             INSERT INTO pagamentos
-            (contrato_id, mes_referencia, valor_pago, data_pagamento, status, criado_por)
-            VALUES (?, ?, ?, ?, ?, ?)
+            (contrato_id, mes_referencia, valor_pago, data_pagamento, status)
+            VALUES (?, ?, ?, ?, ?)
         ");
         $stmt->bind_param(
-            "isdssi",
+            "isdss",
             $contrato_id,
             $mes_referencia,
             $valor_pago,
             $data_pagamento,
-            $status,
-            $criado_por
+            $status
         );
     }
 
@@ -77,7 +74,7 @@ if (isset($_GET['delete'])) {
 }
 
 /* =====================
-   3) CARREGAR EDIÇÃO
+   3) CARREGAR PARA EDIÇÃO
 ===================== */
 $editar = null;
 if (isset($_GET['edit'])) {
@@ -88,16 +85,18 @@ if (isset($_GET['edit'])) {
 }
 
 /* =====================
-   4) SELECT CONTRATOS ATIVOS
+   4) CONTRATOS ATIVOS (SELECT)
 ===================== */
 $contratos = [];
 $result = $conn->query("
-    SELECT c.id,
-           CONCAT(
-               p.nome, ' - ',
-               i.descricao, ' (',
-               iq.nome, ')'
-           ) AS contrato
+    SELECT 
+        c.id,
+        CONCAT(
+            p.nome, ' - ',
+            i.descricao, ' (',
+            iq.nome, ')'
+        ) AS contrato,
+        c.valor_aluguel
     FROM contratos c
     JOIN imoveis i       ON i.id = c.imovel_id
     JOIN proprietarios p ON p.id = i.proprietario_id
@@ -115,15 +114,17 @@ while ($row = $result->fetch_assoc()) {
 ===================== */
 $pagamentos = [];
 $result = $conn->query("
-    SELECT pg.*,
-           iq.nome AS inquilino,
-           i.descricao AS imovel,
-           p.nome AS proprietario
+    SELECT 
+        pg.*,
+        iq.nome AS inquilino,
+        i.descricao AS imovel,
+        p.nome AS proprietario,
+        c.valor_aluguel
     FROM pagamentos pg
     JOIN contratos c     ON c.id = pg.contrato_id
-    JOIN inquilinos iq   ON iq.id = c.inquilino_id
     JOIN imoveis i       ON i.id = c.imovel_id
     JOIN proprietarios p ON p.id = i.proprietario_id
+    JOIN inquilinos iq   ON iq.id = c.inquilino_id
     ORDER BY pg.mes_referencia DESC
 ");
 
@@ -131,6 +132,7 @@ while ($row = $result->fetch_assoc()) {
     $pagamentos[] = $row;
 }
 ?>
+
 <!DOCTYPE html>
 <html lang="pt-br">
 <head>
@@ -139,7 +141,7 @@ while ($row = $result->fetch_assoc()) {
     <style>
         body { font-family: Arial; margin: 20px; }
         form { margin-bottom: 30px; }
-        input, select { margin: 5px 0; padding: 6px; width: 360px; display: block; }
+        input, select { margin: 6px 0; padding: 6px; width: 360px; display: block; }
         table { border-collapse: collapse; width: 100%; }
         th, td { border: 1px solid #ccc; padding: 8px; }
         th { background: #eee; }
@@ -178,7 +180,7 @@ while ($row = $result->fetch_assoc()) {
 
     <label>Status</label>
     <select name="status">
-        <?php foreach (['PAGO','PENDENTE','ATRASADO'] as $s): ?>
+        <?php foreach (['PAGO','ATRASADO','PENDENTE'] as $s): ?>
             <option value="<?= $s ?>"
                 <?= ($editar && $editar['status'] === $s) ? 'selected' : '' ?>>
                 <?= $s ?>
@@ -186,7 +188,9 @@ while ($row = $result->fetch_assoc()) {
         <?php endforeach; ?>
     </select>
 
-    <button type="submit"><?= $editar ? 'Atualizar' : 'Salvar' ?></button>
+    <button type="submit">
+        <?= $editar ? 'Atualizar' : 'Salvar' ?>
+    </button>
 
     <?php if ($editar): ?>
         <a href="pagamentos.php">Cancelar</a>
@@ -201,8 +205,9 @@ while ($row = $result->fetch_assoc()) {
         <th>Imóvel</th>
         <th>Inquilino</th>
         <th>Mês</th>
-        <th>Valor</th>
-        <th>Pago em</th>
+        <th>Aluguel (R$)</th>
+        <th>Pago (R$)</th>
+        <th>Data</th>
         <th>Status</th>
         <th>Ações</th>
     </tr>
@@ -213,13 +218,14 @@ while ($row = $result->fetch_assoc()) {
             <td><?= htmlspecialchars($p['imovel']) ?></td>
             <td><?= htmlspecialchars($p['inquilino']) ?></td>
             <td><?= date('m/Y', strtotime($p['mes_referencia'])) ?></td>
+            <td><?= number_format($p['valor_aluguel'], 2, ',', '.') ?></td>
             <td><?= number_format($p['valor_pago'], 2, ',', '.') ?></td>
             <td><?= $p['data_pagamento'] ? date('d/m/Y', strtotime($p['data_pagamento'])) : '-' ?></td>
             <td><?= $p['status'] ?></td>
             <td>
                 <a href="pagamentos.php?edit=<?= $p['id'] ?>">Editar</a>
                 <a href="pagamentos.php?delete=<?= $p['id'] ?>"
-                   onclick="return confirm('Excluir este pagamento?')">
+                   onclick="return confirm('Deseja excluir este pagamento?')">
                    Excluir
                 </a>
             </td>
