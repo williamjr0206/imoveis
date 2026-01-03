@@ -1,4 +1,8 @@
 <?php
+ini_set('display_errors', 1);
+ini_set('display_startup_errors', 1);
+error_reporting(E_ALL);
+
 require __DIR__ . '/../config/database.php';
 require __DIR__ . '/../config/auth.php';
 require __DIR__ . '/../includes/menu.php';
@@ -9,11 +13,12 @@ verificaPerfil(['ADMIN','OPERADOR']);
    1) SALVAR / EDITAR
 ===================== */
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+
     $id             = $_POST['id'] ?? null;
     $contrato_id    = $_POST['contrato_id'];
     $mes_referencia = $_POST['mes_referencia'];
     $valor_pago     = $_POST['valor_pago'];
-    $data_pagamento = $_POST['data_pagamento'];
+    $data_pagamento = $_POST['data_pagamento'] ?: null;
     $status         = $_POST['status'];
     $criado_por     = $_SESSION['usuario_id'];
 
@@ -34,9 +39,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $status,
             $id
         );
-        $stmt->execute();
     } else {
-        // SALVAR
+        // INSERIR
         $stmt = $conn->prepare("
             INSERT INTO pagamentos
             (contrato_id, mes_referencia, valor_pago, data_pagamento, status, criado_por)
@@ -51,9 +55,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $status,
             $criado_por
         );
-        $stmt->execute();
     }
 
+    $stmt->execute();
     header("Location: pagamentos.php");
     exit;
 }
@@ -84,7 +88,7 @@ if (isset($_GET['edit'])) {
 }
 
 /* =====================
-   4) LISTAR CONTRATOS (SELECT)
+   4) SELECT CONTRATOS ATIVOS
 ===================== */
 $contratos = [];
 $result = $conn->query("
@@ -102,10 +106,6 @@ $result = $conn->query("
     ORDER BY p.nome
 ");
 
-$contratos = [];
-while ($row = $result->fetch_assoc()) {
-    $contratos[] = $row;
-}
 while ($row = $result->fetch_assoc()) {
     $contratos[] = $row;
 }
@@ -127,10 +127,6 @@ $result = $conn->query("
     ORDER BY pg.mes_referencia DESC
 ");
 
-$pagamentos = [];
-while ($row = $result->fetch_assoc()) {
-    $pagamentos[] = $row;
-}
 while ($row = $result->fetch_assoc()) {
     $pagamentos[] = $row;
 }
@@ -182,17 +178,15 @@ while ($row = $result->fetch_assoc()) {
 
     <label>Status</label>
     <select name="status">
-        <?php foreach (['PAGO','ATRASADO','PENDENTE'] as $s): ?>
+        <?php foreach (['PAGO','PENDENTE','ATRASADO'] as $s): ?>
             <option value="<?= $s ?>"
-                <?= ($editar && $editar['status'] == $s) ? 'selected' : '' ?>>
+                <?= ($editar && $editar['status'] === $s) ? 'selected' : '' ?>>
                 <?= $s ?>
             </option>
         <?php endforeach; ?>
     </select>
 
-    <button type="submit">
-        <?= $editar ? 'Atualizar' : 'Salvar' ?>
-    </button>
+    <button type="submit"><?= $editar ? 'Atualizar' : 'Salvar' ?></button>
 
     <?php if ($editar): ?>
         <a href="pagamentos.php">Cancelar</a>
@@ -206,8 +200,8 @@ while ($row = $result->fetch_assoc()) {
         <th>Proprietário</th>
         <th>Imóvel</th>
         <th>Inquilino</th>
-        <th>Mês Ref.</th>
-        <th>Valor (R$)</th>
+        <th>Mês</th>
+        <th>Valor</th>
         <th>Pago em</th>
         <th>Status</th>
         <th>Ações</th>
@@ -225,7 +219,7 @@ while ($row = $result->fetch_assoc()) {
             <td>
                 <a href="pagamentos.php?edit=<?= $p['id'] ?>">Editar</a>
                 <a href="pagamentos.php?delete=<?= $p['id'] ?>"
-                   onclick="return confirm('Deseja excluir este pagamento?')">
+                   onclick="return confirm('Excluir este pagamento?')">
                    Excluir
                 </a>
             </td>
