@@ -225,9 +225,14 @@ while ($row = $result->fetch_assoc()) {
             <td><?= $c['ativo'] ? 'Ativo' : 'Inativo' ?></td>
             <td>
                 <a href="contratos.php?edit=<?= $c['id'] ?>">Editar</a>
+
                 <a href="contratos.php?delete=<?= $c['id'] ?>"
-                   onclick="return confirm('Deseja excluir este contrato?')">
-                   Excluir
+                onclick="return confirm('Deseja excluir este contrato?')">
+                Excluir
+                </a>
+
+                <a href="contrato_pdf.php?id=<?= $c['id'] ?>" target="_blank">
+                    📄 Emitir Contrato
                 </a>
             </td>
         </tr>
