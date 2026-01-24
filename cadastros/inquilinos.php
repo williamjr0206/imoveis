@@ -1,6 +1,5 @@
 <?php
 ini_set('display_errors', 1);
-ini_set('display_startup_errors', 1);
 error_reporting(E_ALL);
 
 require __DIR__ . '/../config/database.php';
@@ -9,48 +8,48 @@ require __DIR__ . '/../includes/menu.php';
 
 verificaPerfil(['ADMIN','OPERADOR']);
 
-/* =====================
+/* =========================
    1) SALVAR / EDITAR
-===================== */
+========================= */
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
-    $id       = $_POST['id'] ?? null;
-    $nome     = $_POST['nome'];
-    $cpf      = $_POST['cpf'];
-    $telefone = $_POST['telefone'];
-    $email    = $_POST['email'];
-    $ativo    = isset($_POST['ativo']) ? 1 : 0;
+    $id           = $_POST['id'] ?? null;
+    $nome         = $_POST['nome'];
+    $tipo_pessoa  = $_POST['tipo_pessoa']; // F ou J
+    $documento    = $_POST['documento'];
+    $telefone     = $_POST['telefone'] ?? null;
+    $email        = $_POST['email'] ?? null;
 
     if ($id) {
         // EDITAR
         $stmt = $conn->prepare("
             UPDATE inquilinos
-            SET nome = ?, cpf = ?, telefone = ?, email = ?, ativo = ?
+            SET nome = ?, tipo_pessoa = ?, documento = ?, telefone = ?, email = ?
             WHERE id = ?
         ");
         $stmt->bind_param(
-            "ssssii",
+            "sssssi",
             $nome,
-            $cpf,
+            $tipo_pessoa,
+            $documento,
             $telefone,
             $email,
-            $ativo,
             $id
         );
     } else {
         // INSERIR
         $stmt = $conn->prepare("
             INSERT INTO inquilinos
-            (nome, cpf, telefone, email, ativo)
+            (nome, tipo_pessoa, documento, telefone, email)
             VALUES (?, ?, ?, ?, ?)
         ");
         $stmt->bind_param(
-            "ssssi",
+            "sssss",
             $nome,
-            $cpf,
+            $tipo_pessoa,
+            $documento,
             $telefone,
-            $email,
-            $ativo
+            $email
         );
     }
 
@@ -59,9 +58,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     exit;
 }
 
-/* =====================
+/* =========================
    2) EXCLUIR
-===================== */
+========================= */
 if (isset($_GET['delete'])) {
     verificaPerfil(['ADMIN']);
 
@@ -73,9 +72,9 @@ if (isset($_GET['delete'])) {
     exit;
 }
 
-/* =====================
-   3) CARREGAR PARA EDIÇÃO
-===================== */
+/* =========================
+   3) CARREGAR EDIÇÃO
+========================= */
 $editar = null;
 if (isset($_GET['edit'])) {
     $stmt = $conn->prepare("SELECT * FROM inquilinos WHERE id = ?");
@@ -84,9 +83,9 @@ if (isset($_GET['edit'])) {
     $editar = $stmt->get_result()->fetch_assoc();
 }
 
-/* =====================
-   4) LISTAR INQUILINOS
-===================== */
+/* =========================
+   4) LISTAGEM
+========================= */
 $inquilinos = [];
 $result = $conn->query("
     SELECT *
@@ -98,7 +97,6 @@ while ($row = $result->fetch_assoc()) {
     $inquilinos[] = $row;
 }
 ?>
-
 <!DOCTYPE html>
 <html lang="pt-br">
 <head>
@@ -107,7 +105,7 @@ while ($row = $result->fetch_assoc()) {
     <style>
         body { font-family: Arial; margin: 20px; }
         form { margin-bottom: 30px; }
-        input { margin: 6px 0; padding: 6px; width: 360px; display: block; }
+        input, select { margin: 6px 0; padding: 6px; width: 350px; display: block; }
         table { border-collapse: collapse; width: 100%; }
         th, td { border: 1px solid #ccc; padding: 8px; }
         th { background: #eee; }
@@ -121,23 +119,32 @@ while ($row = $result->fetch_assoc()) {
 <form method="post">
     <input type="hidden" name="id" value="<?= $editar['id'] ?? '' ?>">
 
-    <label>Nome</label>
-    <input name="nome" required value="<?= $editar['nome'] ?? '' ?>">
+    <label>Nome / Razão Social</label>
+    <input type="text" name="nome" required
+           value="<?= htmlspecialchars($editar['nome'] ?? '') ?>">
 
-    <label>CPF</label>
-    <input name="cpf" value="<?= $editar['cpf'] ?? '' ?>">
+    <label>Tipo de Pessoa</label>
+    <select name="tipo_pessoa" required>
+        <option value="F" <?= ($editar['tipo_pessoa'] ?? 'F') === 'F' ? 'selected' : '' ?>>
+            Pessoa Física (CPF)
+        </option>
+        <option value="J" <?= ($editar['tipo_pessoa'] ?? '') === 'J' ? 'selected' : '' ?>>
+            Pessoa Jurídica (CNPJ)
+        </option>
+    </select>
+
+    <label>CPF / CNPJ</label>
+    <input type="text" name="documento" required
+           value="<?= htmlspecialchars($editar['documento'] ?? '') ?>"
+           placeholder="CPF ou CNPJ">
 
     <label>Telefone</label>
-    <input name="telefone" value="<?= $editar['telefone'] ?? '' ?>">
+    <input type="text" name="telefone"
+           value="<?= htmlspecialchars($editar['telefone'] ?? '') ?>">
 
-    <label>E-mail</label>
-    <input type="email" name="email" value="<?= $editar['email'] ?? '' ?>">
-
-    <label>
-        <input type="checkbox" name="ativo"
-            <?= (!isset($editar) || ($editar['ativo'] ?? 1)) ? 'checked' : '' ?>>
-        Ativo
-    </label>
+    <label>Email</label>
+    <input type="email" name="email"
+           value="<?= htmlspecialchars($editar['email'] ?? '') ?>">
 
     <button type="submit">
         <?= $editar ? 'Atualizar' : 'Salvar' ?>
@@ -153,23 +160,22 @@ while ($row = $result->fetch_assoc()) {
 <table>
     <tr>
         <th>Nome</th>
-        <th>CPF</th>
+        <th>Tipo</th>
+        <th>Documento</th>
         <th>Telefone</th>
-        <th>E-mail</th>
-        <th>Status</th>
+        <th>Email</th>
         <th>Ações</th>
     </tr>
 
     <?php foreach ($inquilinos as $i): ?>
         <tr>
             <td><?= htmlspecialchars($i['nome']) ?></td>
-            <td><?= htmlspecialchars($i['cpf']) ?></td>
+            <td><?= $i['tipo_pessoa'] === 'F' ? 'Pessoa Física' : 'Pessoa Jurídica' ?></td>
+            <td><?= htmlspecialchars($i['documento']) ?></td>
             <td><?= htmlspecialchars($i['telefone']) ?></td>
             <td><?= htmlspecialchars($i['email']) ?></td>
-            <td><?= $i['ativo'] ? 'Ativo' : 'Inativo' ?></td>
             <td>
                 <a href="inquilinos.php?edit=<?= $i['id'] ?>">Editar</a>
-
                 <a href="inquilinos.php?delete=<?= $i['id'] ?>"
                    onclick="return confirm('Deseja excluir este inquilino?')">
                    Excluir

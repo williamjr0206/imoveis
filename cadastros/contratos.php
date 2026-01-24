@@ -25,8 +25,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         // EDITAR
         $stmt = $conn->prepare("
             UPDATE contratos
-            SET imovel_id = ?, inquilino_id = ?, data_inicio = ?, data_fim = ?, 
-                dia_vencimento = ?, ativo = ?
+            SET imovel_id = ?,
+                inquilino_id = ?,
+                data_inicio = ?,
+                data_fim = ?,
+                dia_vencimento = ?,
+                ativo = ?
             WHERE id = ?
         ");
         $stmt->bind_param(
@@ -104,21 +108,27 @@ while ($row = $result->fetch_assoc()) {
 }
 
 /* =========================
-   5) INQUILINOS
+   5) INQUILINOS (PF + PJ)
 ========================= */
 $inquilinos = [];
-$result = $conn->query("SELECT id, nome FROM inquilinos ORDER BY nome");
+$result = $conn->query("
+    SELECT id, nome, tipo_pessoa, documento
+    FROM inquilinos
+    ORDER BY nome
+");
 while ($row = $result->fetch_assoc()) {
     $inquilinos[] = $row;
 }
 
 /* =========================
-   6) LISTAGEM
+   6) LISTAGEM DE CONTRATOS
 ========================= */
 $contratos = [];
 $result = $conn->query("
     SELECT c.*,
            iq.nome AS inquilino,
+           iq.tipo_pessoa,
+           iq.documento,
            CONCAT(p.nome, ' - ', i.descricao) AS imovel,
            i.valor_aluguel
     FROM contratos c
@@ -131,6 +141,7 @@ while ($row = $result->fetch_assoc()) {
     $contratos[] = $row;
 }
 ?>
+
 <!DOCTYPE html>
 <html lang="pt-br">
 <head>
@@ -139,7 +150,7 @@ while ($row = $result->fetch_assoc()) {
     <style>
         body { font-family: Arial; margin: 20px; }
         form { margin-bottom: 30px; }
-        input, select { margin: 6px 0; padding: 6px; width: 350px; display: block; }
+        input, select { margin: 6px 0; padding: 6px; width: 360px; display: block; }
         table { border-collapse: collapse; width: 100%; }
         th, td { border: 1px solid #ccc; padding: 8px; }
         th { background: #eee; }
@@ -171,6 +182,7 @@ while ($row = $result->fetch_assoc()) {
             <option value="<?= $iq['id'] ?>"
                 <?= ($editar && $editar['inquilino_id'] == $iq['id']) ? 'selected' : '' ?>>
                 <?= htmlspecialchars($iq['nome']) ?>
+                (<?= $iq['tipo_pessoa'] === 'J' ? 'CNPJ' : 'CPF' ?>)
             </option>
         <?php endforeach; ?>
     </select>
@@ -208,6 +220,7 @@ while ($row = $result->fetch_assoc()) {
     <tr>
         <th>Imóvel</th>
         <th>Inquilino</th>
+        <th>Tipo</th>
         <th>Aluguel (R$)</th>
         <th>Início</th>
         <th>Venc.</th>
@@ -219,20 +232,20 @@ while ($row = $result->fetch_assoc()) {
         <tr>
             <td><?= htmlspecialchars($c['imovel']) ?></td>
             <td><?= htmlspecialchars($c['inquilino']) ?></td>
+            <td><?= $c['tipo_pessoa'] === 'J' ? 'Pessoa Jurídica' : 'Pessoa Física' ?></td>
             <td><?= number_format($c['valor_aluguel'], 2, ',', '.') ?></td>
             <td><?= date('d/m/Y', strtotime($c['data_inicio'])) ?></td>
             <td><?= $c['dia_vencimento'] ?></td>
             <td><?= $c['ativo'] ? 'Ativo' : 'Inativo' ?></td>
             <td>
                 <a href="contratos.php?edit=<?= $c['id'] ?>">Editar</a>
-
                 <a href="contratos.php?delete=<?= $c['id'] ?>"
-                onclick="return confirm('Deseja excluir este contrato?')">
-                Excluir
+                   onclick="return confirm('Deseja excluir este contrato?')">
+                   Excluir
                 </a>
-
+                |
                 <a href="contrato_pdf.php?id=<?= $c['id'] ?>" target="_blank">
-                    📄 Emitir Contrato
+                    PDF
                 </a>
             </td>
         </tr>
