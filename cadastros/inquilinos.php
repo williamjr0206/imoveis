@@ -9,47 +9,62 @@ require __DIR__ . '/../includes/menu.php';
 verificaPerfil(['ADMIN','OPERADOR']);
 
 /* =========================
-   1) SALVAR / EDITAR
+   SALVAR / EDITAR
 ========================= */
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
-    $id           = $_POST['id'] ?? null;
-    $nome         = $_POST['nome'];
-    $tipo_pessoa  = $_POST['tipo_pessoa']; // F ou J
-    $documento    = $_POST['documento'];
-    $telefone     = $_POST['telefone'] ?? null;
-    $email        = $_POST['email'] ?? null;
+    $id = $_POST['id'] ?? null;
+
+    $tipo_pessoa = $_POST['tipo_pessoa'];
+    $nome        = $_POST['nome'];
+    $cpf         = $_POST['cpf'] ?? null;
+    $cnpj        = $_POST['cnpj'] ?? null;
+    $endereco    = $_POST['endereco'];
+
+    $rep_nome = $_POST['representante_nome'] ?? null;
+    $rep_cpf  = $_POST['representante_cpf'] ?? null;
+
+    if ($tipo_pessoa === 'PF') {
+        $cnpj = null;
+        $rep_nome = null;
+        $rep_cpf = null;
+    } else {
+        $cpf = null;
+    }
 
     if ($id) {
-        // EDITAR
         $stmt = $conn->prepare("
             UPDATE inquilinos
-            SET nome = ?, tipo_pessoa = ?, documento = ?, telefone = ?, email = ?
+            SET tipo_pessoa = ?, nome = ?, cpf = ?, cnpj = ?, 
+                representante_nome = ?, representante_cpf = ?, endereco = ?
             WHERE id = ?
         ");
         $stmt->bind_param(
-            "sssssi",
-            $nome,
+            "sssssssi",
             $tipo_pessoa,
-            $documento,
-            $telefone,
-            $email,
+            $nome,
+            $cpf,
+            $cnpj,
+            $rep_nome,
+            $rep_cpf,
+            $endereco,
             $id
         );
     } else {
-        // INSERIR
         $stmt = $conn->prepare("
             INSERT INTO inquilinos
-            (nome, tipo_pessoa, documento, telefone, email)
-            VALUES (?, ?, ?, ?, ?)
+            (tipo_pessoa, nome, cpf, cnpj, representante_nome, representante_cpf, endereco)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
         ");
         $stmt->bind_param(
-            "sssss",
-            $nome,
+            "sssssss",
             $tipo_pessoa,
-            $documento,
-            $telefone,
-            $email
+            $nome,
+            $cpf,
+            $cnpj,
+            $rep_nome,
+            $rep_cpf,
+            $endereco
         );
     }
 
@@ -59,7 +74,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 
 /* =========================
-   2) EXCLUIR
+   EXCLUIR
 ========================= */
 if (isset($_GET['delete'])) {
     verificaPerfil(['ADMIN']);
@@ -73,7 +88,7 @@ if (isset($_GET['delete'])) {
 }
 
 /* =========================
-   3) CARREGAR EDIÇÃO
+   EDITAR
 ========================= */
 $editar = null;
 if (isset($_GET['edit'])) {
@@ -84,106 +99,103 @@ if (isset($_GET['edit'])) {
 }
 
 /* =========================
-   4) LISTAGEM
+   LISTAGEM
 ========================= */
 $inquilinos = [];
-$result = $conn->query("
-    SELECT *
-    FROM inquilinos
-    ORDER BY nome
-");
-
+$result = $conn->query("SELECT * FROM inquilinos ORDER BY nome");
 while ($row = $result->fetch_assoc()) {
     $inquilinos[] = $row;
 }
 ?>
+
 <!DOCTYPE html>
 <html lang="pt-br">
 <head>
-    <meta charset="UTF-8">
-    <title>Inquilinos</title>
-    <style>
-        body { font-family: Arial; margin: 20px; }
-        form { margin-bottom: 30px; }
-        input, select { margin: 6px 0; padding: 6px; width: 350px; display: block; }
-        table { border-collapse: collapse; width: 100%; }
-        th, td { border: 1px solid #ccc; padding: 8px; }
-        th { background: #eee; }
-        a { margin-right: 10px; }
-    </style>
+<meta charset="UTF-8">
+<title>Inquilinos</title>
+<style>
+body { font-family: Arial; margin: 20px; }
+input, select, textarea { width: 360px; padding: 6px; margin: 5px 0; }
+table { width: 100%; border-collapse: collapse; }
+th, td { border: 1px solid #ccc; padding: 8px; }
+th { background: #eee; }
+</style>
+
+<script>
+function togglePessoa() {
+    let tipo = document.getElementById('tipo_pessoa').value;
+    document.getElementById('pf').style.display = (tipo === 'PF') ? 'block' : 'none';
+    document.getElementById('pj').style.display = (tipo === 'PJ') ? 'block' : 'none';
+}
+</script>
 </head>
 <body>
 
 <h2><?= $editar ? 'Editar Inquilino' : 'Novo Inquilino' ?></h2>
 
 <form method="post">
-    <input type="hidden" name="id" value="<?= $editar['id'] ?? '' ?>">
+<input type="hidden" name="id" value="<?= $editar['id'] ?? '' ?>">
 
-    <label>Nome / Razão Social</label>
-    <input type="text" name="nome" required
-           value="<?= htmlspecialchars($editar['nome'] ?? '') ?>">
+<label>Tipo de Pessoa</label>
+<select name="tipo_pessoa" id="tipo_pessoa" onchange="togglePessoa()" required>
+    <option value="PF" <?= ($editar['tipo_pessoa'] ?? '') === 'PF' ? 'selected' : '' ?>>Pessoa Física</option>
+    <option value="PJ" <?= ($editar['tipo_pessoa'] ?? '') === 'PJ' ? 'selected' : '' ?>>Pessoa Jurídica</option>
+</select>
 
-    <label>Tipo de Pessoa</label>
-    <select name="tipo_pessoa" required>
-        <option value="F" <?= ($editar['tipo_pessoa'] ?? 'F') === 'F' ? 'selected' : '' ?>>
-            Pessoa Física (CPF)
-        </option>
-        <option value="J" <?= ($editar['tipo_pessoa'] ?? '') === 'J' ? 'selected' : '' ?>>
-            Pessoa Jurídica (CNPJ)
-        </option>
-    </select>
+<label>Nome / Razão Social</label>
+<input type="text" name="nome" required value="<?= $editar['nome'] ?? '' ?>">
 
-    <label>CPF / CNPJ</label>
-    <input type="text" name="documento" required
-           value="<?= htmlspecialchars($editar['documento'] ?? '') ?>"
-           placeholder="CPF ou CNPJ">
+<div id="pf">
+    <label>CPF</label>
+    <input type="text" name="cpf" value="<?= $editar['cpf'] ?? '' ?>">
+</div>
 
-    <label>Telefone</label>
-    <input type="text" name="telefone"
-           value="<?= htmlspecialchars($editar['telefone'] ?? '') ?>">
+<div id="pj" style="display:none">
+    <label>CNPJ</label>
+    <input type="text" name="cnpj" value="<?= $editar['cnpj'] ?? '' ?>">
 
-    <label>Email</label>
-    <input type="email" name="email"
-           value="<?= htmlspecialchars($editar['email'] ?? '') ?>">
+    <label>Representante Legal</label>
+    <input type="text" name="representante_nome" value="<?= $editar['representante_nome'] ?? '' ?>">
 
-    <button type="submit">
-        <?= $editar ? 'Atualizar' : 'Salvar' ?>
-    </button>
+    <label>CPF do Representante</label>
+    <input type="text" name="representante_cpf" value="<?= $editar['representante_cpf'] ?? '' ?>">
+</div>
 
-    <?php if ($editar): ?>
-        <a href="inquilinos.php">Cancelar</a>
-    <?php endif; ?>
+<label>Endereço</label>
+<textarea name="endereco" required><?= $editar['endereco'] ?? '' ?></textarea>
+
+<button type="submit">Salvar</button>
+<?php if ($editar): ?>
+<a href="inquilinos.php">Cancelar</a>
+<?php endif; ?>
 </form>
 
 <h2>Lista de Inquilinos</h2>
 
 <table>
-    <tr>
-        <th>Nome</th>
-        <th>Tipo</th>
-        <th>Documento</th>
-        <th>Telefone</th>
-        <th>Email</th>
-        <th>Ações</th>
-    </tr>
+<tr>
+    <th>Nome</th>
+    <th>Tipo</th>
+    <th>Documento</th>
+    <th>Ações</th>
+</tr>
 
-    <?php foreach ($inquilinos as $i): ?>
-        <tr>
-            <td><?= htmlspecialchars($i['nome']) ?></td>
-            <td><?= $i['tipo_pessoa'] === 'F' ? 'Pessoa Física' : 'Pessoa Jurídica' ?></td>
-            <td><?= htmlspecialchars($i['documento']) ?></td>
-            <td><?= htmlspecialchars($i['telefone']) ?></td>
-            <td><?= htmlspecialchars($i['email']) ?></td>
-            <td>
-                <a href="inquilinos.php?edit=<?= $i['id'] ?>">Editar</a>
-                <a href="inquilinos.php?delete=<?= $i['id'] ?>"
-                   onclick="return confirm('Deseja excluir este inquilino?')">
-                   Excluir
-                </a>
-            </td>
-        </tr>
-    <?php endforeach; ?>
+<?php foreach ($inquilinos as $i): ?>
+<tr>
+    <td><?= htmlspecialchars($i['nome']) ?></td>
+    <td><?= $i['tipo_pessoa'] ?></td>
+    <td><?= $i['tipo_pessoa'] === 'PF' ? $i['cpf'] : $i['cnpj'] ?></td>
+    <td>
+        <a href="inquilinos.php?edit=<?= $i['id'] ?>">Editar</a>
+        <a href="inquilinos.php?delete=<?= $i['id'] ?>"
+           onclick="return confirm('Deseja excluir este inquilino?')">
+           Excluir
+        </a>
+    </td>
+</tr>
+<?php endforeach; ?>
 </table>
 
+<script>togglePessoa();</script>
 </body>
 </html>

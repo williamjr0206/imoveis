@@ -257,8 +257,20 @@ Ativo
 <td><?= date('d/m/Y', strtotime($c['data_inicio'])) ?></td>
 <td><?= $c['ativo']?'Ativo':'Inativo' ?></td>
 <td>
-<a href="contratos.php?edit=<?= $c['id'] ?>">Editar</a> |
-<a href="contrato_pdf.php?id=<?= $c['id'] ?>" target="_blank">PDF</a>
+    <a href="contratos.php?edit=<?= $c['id'] ?>">Editar</a>
+
+    <a href="contrato_pdf.php?id=<?= $c['id'] ?>" target="_blank">
+        Contrato Padrão
+    </a>
+
+    <a href="contrato_felipe_pdf.php?id=<?= $c['id'] ?>" target="_blank">
+        Contrato Jurídico
+    </a>
+
+    <a href="contratos.php?delete=<?= $c['id'] ?>"
+       onclick="return confirm('Deseja excluir este contrato?')">
+       Excluir
+    </a>
 </td>
 </tr>
 <?php endforeach; ?>
