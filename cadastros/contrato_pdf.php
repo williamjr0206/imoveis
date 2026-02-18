@@ -1,5 +1,6 @@
 <?php
-ob_clean();
+ob_start();
+error_reporting(E_ALL & ~E_WARNING & ~E_NOTICE);
 
 require __DIR__ . '/../config/database.php';
 require __DIR__ . '/../config/auth.php';
@@ -7,128 +8,86 @@ require __DIR__ . '/../vendedor/fpdf/fpdf.php';
 
 verificaPerfil(['ADMIN','OPERADOR']);
 
-function pdfText($txt) {
-    return iconv('UTF-8', 'ISO-8859-1//TRANSLIT', $txt);
-}
+$contratoId = (int)($_GET['id'] ?? 0);
 
-$id = $_GET['id'] ?? null;
-if (!$id) {
-    die('Contrato não informado');
-}
-
-/* =========================
-   QUERY BASE DO CONTRATO
-========================= */
 $stmt = $conn->prepare("
-    SELECT
-        c.data_inicio,
-        c.data_fim,
-        c.dia_vencimento,
-
-        i.descricao     AS imovel_descricao,
-        i.endereco      AS imovel_endereco,
-        i.valor_aluguel,
-
-        p.nome          AS proprietario_nome,
-        p.cpf           AS proprietario_cpf,
-
-        iq.nome         AS inquilino_nome,
-        iq.tipo         AS inquilino_tipo,
-        iq.documento    AS inquilino_documento
-
-    FROM contratos c
-    JOIN imoveis i       ON i.id = c.imovel_id
-    JOIN proprietarios p ON p.id = i.proprietario_id
-    JOIN inquilinos iq   ON iq.id = c.inquilino_id
-    WHERE c.id = ?
+    SELECT *
+    FROM vw_contrato_base
+    WHERE contrato_id = ?
 ");
-
-$stmt->bind_param("i", $id);
+$stmt->bind_param("i", $contratoId);
 $stmt->execute();
 $dados = $stmt->get_result()->fetch_assoc();
 
 if (!$dados) {
-    die('Contrato não encontrado');
+    die('Contrato não encontrado.');
 }
 
-/* =========================
-   FORMATAÇÕES
-========================= */
-$dataContrato = date('d/m/Y');
-$dataInicio   = date('d/m/Y', strtotime($dados['data_inicio']));
-$dataFim      = $dados['data_fim']
-    ? date('d/m/Y', strtotime($dados['data_fim']))
-    : 'prazo indeterminado';
+/* ===============================
+   TRATAMENTO DE DADOS
+=============================== */
 
-$valorAluguel = number_format($dados['valor_aluguel'], 2, ',', '.');
+// LOCADOR
+$locadorNome = $dados['locador_nome'];
+$locadorCpf  = $dados['locador_cpf'];
 
-/* =========================
-   LOCATÁRIO
-========================= */
-if ($dados['inquilino_tipo'] === 'PJ') {
-    $locatario = "{$dados['inquilino_nome']}, pessoa jurídica, inscrita no CNPJ {$dados['inquilino_documento']}";
+// LOCATÁRIO
+if ($dados['tipo_pessoa'] === 'PJ') {
+    $locatario = $dados['inquilino_nome'];
+    $docLocatario = 'CNPJ: ' . $dados['cnpj'];
+    $representante = 'Representado por ' . $dados['representante_nome'] .
+                     ', CPF ' . $dados['representante_cpf'];
 } else {
-    $locatario = "{$dados['inquilino_nome']}, inscrito no CPF {$dados['inquilino_documento']}";
+    $locatario = $dados['inquilino_nome'];
+    $docLocatario = 'CPF: ' . $dados['cpf'];
+    $representante = '';
 }
 
-/* =========================
-   TEXTO JURÍDICO
-========================= */
-$textoContrato = "
-CONTRATO DE LOCAÇÃO DE IMÓVEL RESIDENCIAL
+// IMÓVEL
+$imovel = $dados['imovel_descricao'];
+$endereco = $dados['endereco'];
 
-Pelo presente instrumento particular, de um lado:
+// CONTRATO
+$dataInicio = date('d/m/Y', strtotime($dados['data_inicio']));
+$dataFim    = $dados['data_fim'] ? date('d/m/Y', strtotime($dados['data_fim'])) : 'prazo indeterminado';
+$valor      = number_format($dados['valor_aluguel'], 2, ',', '.');
+$vencimento = $dados['dia_vencimento'];
 
-LOCADOR:
-{$dados['proprietario_nome']}, inscrito no CPF {$dados['proprietario_cpf']}.
-
-E de outro lado:
-
-LOCATÁRIO:
-{$locatario}.
-
-Têm entre si justo e contratado o que segue:
-
-CLÁUSULA PRIMEIRA – DO OBJETO
-O presente contrato tem por objeto a locação do imóvel localizado em:
-{$dados['imovel_descricao']}, situado à {$dados['imovel_endereco']}.
-
-CLÁUSULA SEGUNDA – DO PRAZO
-A locação inicia-se em {$dataInicio}, com término em {$dataFim}.
-
-CLÁUSULA TERCEIRA – DO VALOR DO ALUGUEL
-O aluguel mensal é fixado em R$ {$valorAluguel}, devendo ser pago até o dia {$dados['dia_vencimento']} de cada mês.
-
-CLÁUSULA QUARTA – DAS OBRIGAÇÕES DO LOCATÁRIO
-São obrigações do LOCATÁRIO:
-I – Pagar pontualmente o aluguel e encargos;
-II – Manter o imóvel em perfeito estado;
-III – Restituir o imóvel ao final da locação nas condições recebidas.
-
-CLÁUSULA QUINTA – DISPOSIÇÕES GERAIS
-Este contrato rege-se pela Lei nº 8.245/91 (Lei do Inquilinato).
-Fica eleito o foro da comarca do imóvel para dirimir quaisquer controvérsias.
-
-E, por estarem justos e contratados, assinam o presente instrumento.
-
-Data do contrato: {$dataContrato}.
-";
-
-/* =========================
+/* ===============================
    PDF
-========================= */
+=============================== */
+
 $pdf = new FPDF();
 $pdf->AddPage();
 $pdf->SetFont('Arial','',11);
-$pdf->MultiCell(0, 7, pdfText($textoContrato));
 
-$pdf->Ln(15);
-$pdf->Cell(0, 7, pdfText("____________________________________________"), 0, 1);
-$pdf->Cell(0, 7, pdfText("LOCADOR"), 0, 1);
+$pdf->MultiCell(0, 6,
+"CONTRATO DE LOCACAO DE IMOVEL RESIDENCIAL
 
-$pdf->Ln(10);
-$pdf->Cell(0, 7, pdfText("____________________________________________"), 0, 1);
-$pdf->Cell(0, 7, pdfText("LOCATÁRIO"), 0, 1);
+LOCADOR: $locadorNome, CPF $locadorCpf.
+
+LOCATARIO: $locatario, $docLocatario.
+$representante
+
+IMOVEL: $imovel, situado em $endereco.
+
+O presente contrato tem inicio em $dataInicio, com termino em $dataFim.
+
+O valor mensal do aluguel e de R$ $valor, com vencimento todo dia $vencimento de cada mes.
+
+O contrato sera reajustado conforme indice previsto em contrato.
+
+As partes elegem o foro da comarca do imovel para dirimir quaisquer duvidas oriundas deste contrato.
+
+E por estarem justas e contratadas, assinam o presente instrumento.
+
+____________________________________
+LOCADOR
+
+____________________________________
+LOCATARIO
+");
 
 $pdf->Output('I', 'contrato_locacao.pdf');
-exit;
+
+ob_end_flush();
