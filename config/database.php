@@ -2,7 +2,7 @@
 $hostAtual = $_SERVER['HTTP_HOST'] ?? '';
 
 $ambiente = (
-    $hostAtual === 'meu_projeto.local' ||
+    $hostAtual === 'localhost' ||
     $hostAtual === 'localhost'
 ) ? 'local' : 'prod';
 
