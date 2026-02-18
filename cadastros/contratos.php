@@ -13,21 +13,19 @@ verificaPerfil(['ADMIN','OPERADOR']);
 ========================= */
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
-    $id             = $_POST['id'] ?? null;
-    $imovel_id      = $_POST['imovel_id'];
-    $inquilino_id   = $_POST['inquilino_id'];
-    $data_inicio    = $_POST['data_inicio'];
-    $data_fim       = $_POST['data_fim'] ?: null;
-    $dia_vencimento = $_POST['dia_vencimento'];
-    $ativo          = isset($_POST['ativo']) ? 1 : 0;
-
-    // novos campos jurídicos
-    $tipo_contrato   = $_POST['tipo_contrato'];
-    $finalidade      = $_POST['finalidade'];
+    $id              = $_POST['id'] ?? null;
+    $imovel_id       = $_POST['imovel_id'];
+    $inquilino_id    = $_POST['inquilino_id'];
+    $data_inicio     = $_POST['data_inicio'];
+    $data_fim        = $_POST['data_fim'] ?: null;
+    $dia_vencimento  = $_POST['dia_vencimento'];
     $prazo_meses     = $_POST['prazo_meses'];
+    $finalidade      = $_POST['finalidade'];
     $indice_reajuste = $_POST['indice_reajuste'];
+    $tipo_contrato   = $_POST['tipo_contrato'];
     $tipo_garantia   = $_POST['tipo_garantia'];
     $valor_caucao    = $_POST['valor_caucao'] ?: null;
+    $ativo           = isset($_POST['ativo']) ? 1 : 0;
 
     if ($id) {
         $stmt = $conn->prepare("
@@ -37,56 +35,53 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 data_inicio = ?,
                 data_fim = ?,
                 dia_vencimento = ?,
-                ativo = ?,
-                tipo_contrato = ?,
-                finalidade = ?,
                 prazo_meses = ?,
+                finalidade = ?,
                 indice_reajuste = ?,
+                tipo_contrato = ?,
                 tipo_garantia = ?,
-                valor_caucao = ?
+                valor_caucao = ?,
+                ativo = ?
             WHERE id = ?
         ");
         $stmt->bind_param(
-            "iissii ssissdi",
+            "iissiiisssdii",
             $imovel_id,
             $inquilino_id,
             $data_inicio,
             $data_fim,
             $dia_vencimento,
-            $ativo,
-            $tipo_contrato,
-            $finalidade,
             $prazo_meses,
+            $finalidade,
             $indice_reajuste,
+            $tipo_contrato,
             $tipo_garantia,
             $valor_caucao,
+            $ativo,
             $id
         );
     } else {
         $stmt = $conn->prepare("
             INSERT INTO contratos
-            (
-                imovel_id, inquilino_id, data_inicio, data_fim,
-                dia_vencimento, ativo,
-                tipo_contrato, finalidade, prazo_meses,
-                indice_reajuste, tipo_garantia, valor_caucao
-            )
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            (imovel_id, inquilino_id, data_inicio, data_fim, dia_vencimento,
+             prazo_meses, finalidade, indice_reajuste, tipo_contrato,
+             tipo_garantia, valor_caucao, ativo)
+            VALUES (?,?,?,?,?,?,?,?,?,?,?,?)
         ");
         $stmt->bind_param(
-            "iissii ssissd",
+            "iissiiisssdi",
             $imovel_id,
             $inquilino_id,
             $data_inicio,
             $data_fim,
             $dia_vencimento,
-            $ativo,
-            $tipo_contrato,
-            $finalidade,
             $prazo_meses,
+            $finalidade,
             $indice_reajuste,
+            $tipo_contrato,
             $tipo_garantia,
-            $valor_caucao
+            $valor_caucao,
+            $ativo
         );
     }
 
@@ -119,42 +114,33 @@ if (isset($_GET['edit'])) {
 }
 
 /* =========================
-   4) IMÓVEIS ATIVOS
+   4) DADOS AUXILIARES
 ========================= */
-$imoveis = [];
-$res = $conn->query("
-    SELECT i.id,
-           CONCAT(p.nome, ' - ', i.descricao) AS imovel
+$imoveis = $conn->query("
+    SELECT i.id, CONCAT(p.nome,' - ',i.descricao) AS imovel
     FROM imoveis i
     JOIN proprietarios p ON p.id = i.proprietario_id
     WHERE i.ativo = 1
-    ORDER BY p.nome
-");
-while ($r = $res->fetch_assoc()) $imoveis[] = $r;
+")->fetch_all(MYSQLI_ASSOC);
+
+$inquilinos = $conn->query("
+    SELECT id, nome FROM inquilinos ORDER BY nome
+")->fetch_all(MYSQLI_ASSOC);
 
 /* =========================
-   5) INQUILINOS
+   5) LISTAGEM
 ========================= */
-$inquilinos = [];
-$res = $conn->query("SELECT id, nome FROM inquilinos ORDER BY nome");
-while ($r = $res->fetch_assoc()) $inquilinos[] = $r;
-
-/* =========================
-   6) LISTAGEM
-========================= */
-$contratos = [];
-$res = $conn->query("
-    SELECT c.*,
+$contratos = $conn->query("
+    SELECT c.id, c.data_inicio, c.dia_vencimento, c.ativo,
            iq.nome AS inquilino,
-           CONCAT(p.nome, ' - ', i.descricao) AS imovel,
+           CONCAT(p.nome,' - ',i.descricao) AS imovel,
            i.valor_aluguel
     FROM contratos c
-    JOIN inquilinos iq   ON iq.id = c.inquilino_id
-    JOIN imoveis i       ON i.id = c.imovel_id
+    JOIN inquilinos iq ON iq.id = c.inquilino_id
+    JOIN imoveis i ON i.id = c.imovel_id
     JOIN proprietarios p ON p.id = i.proprietario_id
     ORDER BY c.data_inicio DESC
-");
-while ($r = $res->fetch_assoc()) $contratos[] = $r;
+")->fetch_all(MYSQLI_ASSOC);
 ?>
 
 <!DOCTYPE html>
@@ -164,12 +150,14 @@ while ($r = $res->fetch_assoc()) $contratos[] = $r;
 <title>Contratos</title>
 <style>
 body { font-family: Arial; margin: 20px; }
-input, select { margin: 6px 0; padding: 6px; width: 360px; }
-table { border-collapse: collapse; width: 100%; margin-top: 30px; }
+input, select { width: 360px; padding: 6px; margin: 5px 0; }
+table { width: 100%; border-collapse: collapse; margin-top: 20px; }
 th, td { border: 1px solid #ccc; padding: 8px; }
 th { background: #eee; }
+a { margin-right: 8px; }
 </style>
 </head>
+
 <body>
 
 <h2><?= $editar ? 'Editar Contrato' : 'Novo Contrato' ?></h2>
@@ -177,9 +165,8 @@ th { background: #eee; }
 <form method="post">
 <input type="hidden" name="id" value="<?= $editar['id'] ?? '' ?>">
 
-<label>Imóvel</label>
 <select name="imovel_id" required>
-<option value="">Selecione</option>
+<option value="">Imóvel</option>
 <?php foreach ($imoveis as $i): ?>
 <option value="<?= $i['id'] ?>" <?= ($editar && $editar['imovel_id']==$i['id'])?'selected':'' ?>>
 <?= htmlspecialchars($i['imovel']) ?>
@@ -187,9 +174,8 @@ th { background: #eee; }
 <?php endforeach; ?>
 </select>
 
-<label>Inquilino</label>
 <select name="inquilino_id" required>
-<option value="">Selecione</option>
+<option value="">Inquilino</option>
 <?php foreach ($inquilinos as $iq): ?>
 <option value="<?= $iq['id'] ?>" <?= ($editar && $editar['inquilino_id']==$iq['id'])?'selected':'' ?>>
 <?= htmlspecialchars($iq['nome']) ?>
@@ -197,80 +183,50 @@ th { background: #eee; }
 <?php endforeach; ?>
 </select>
 
-<label>Tipo de Contrato</label>
-<select name="tipo_contrato">
-<option value="RESIDENCIAL">Residencial</option>
-<option value="NAO_RESIDENCIAL">Não Residencial</option>
-</select>
-
-<label>Finalidade</label>
-<input type="text" name="finalidade" value="<?= $editar['finalidade'] ?? '' ?>">
-
-<label>Prazo (meses)</label>
-<input type="number" name="prazo_meses" value="<?= $editar['prazo_meses'] ?? 12 ?>">
-
-<label>Índice de Reajuste</label>
-<input type="text" name="indice_reajuste" value="<?= $editar['indice_reajuste'] ?? 'IGP-M' ?>">
-
-<label>Garantia</label>
-<select name="tipo_garantia">
-<option value="CAUCAO">Caução</option>
-<option value="FIADOR">Fiador</option>
-<option value="SEGURO">Seguro Fiança</option>
-</select>
-
-<label>Valor Caução</label>
-<input type="number" step="0.01" name="valor_caucao" value="<?= $editar['valor_caucao'] ?? '' ?>">
-
-<label>Início</label>
 <input type="date" name="data_inicio" required value="<?= $editar['data_inicio'] ?? '' ?>">
-
-<label>Fim</label>
 <input type="date" name="data_fim" value="<?= $editar['data_fim'] ?? '' ?>">
+<input type="number" name="dia_vencimento" min="1" max="31" required value="<?= $editar['dia_vencimento'] ?? '' ?>">
+<input type="number" name="prazo_meses" required placeholder="Prazo (meses)" value="<?= $editar['prazo_meses'] ?? '' ?>">
 
-<label>Dia Vencimento</label>
-<input type="number" name="dia_vencimento" min="1" max="31" value="<?= $editar['dia_vencimento'] ?? 5 ?>">
+<input type="text" name="finalidade" placeholder="Finalidade do contrato" value="<?= $editar['finalidade'] ?? '' ?>">
+<input type="text" name="indice_reajuste" placeholder="Índice de reajuste" value="<?= $editar['indice_reajuste'] ?? '' ?>">
+<input type="text" name="tipo_contrato" placeholder="Tipo de contrato" value="<?= $editar['tipo_contrato'] ?? '' ?>">
+<input type="text" name="tipo_garantia" placeholder="Tipo de garantia" value="<?= $editar['tipo_garantia'] ?? '' ?>">
+<input type="number" step="0.01" name="valor_caucao" placeholder="Valor da caução" value="<?= $editar['valor_caucao'] ?? '' ?>">
 
 <label>
 <input type="checkbox" name="ativo" <?= (!$editar || $editar['ativo'])?'checked':'' ?>>
-Ativo
+ Contrato ativo
 </label>
 
 <button type="submit">Salvar</button>
 </form>
 
 <h2>Contratos</h2>
+
 <table>
 <tr>
 <th>Imóvel</th>
 <th>Inquilino</th>
 <th>Aluguel</th>
 <th>Início</th>
+<th>Venc.</th>
 <th>Status</th>
 <th>Ações</th>
 </tr>
+
 <?php foreach ($contratos as $c): ?>
 <tr>
 <td><?= htmlspecialchars($c['imovel']) ?></td>
 <td><?= htmlspecialchars($c['inquilino']) ?></td>
 <td>R$ <?= number_format($c['valor_aluguel'],2,',','.') ?></td>
-<td><?= date('d/m/Y', strtotime($c['data_inicio'])) ?></td>
+<td><?= date('d/m/Y',strtotime($c['data_inicio'])) ?></td>
+<td><?= $c['dia_vencimento'] ?></td>
 <td><?= $c['ativo']?'Ativo':'Inativo' ?></td>
 <td>
-    <a href="contratos.php?edit=<?= $c['id'] ?>">Editar</a>
-
-    <a href="contrato_pdf.php?id=<?= $c['id'] ?>" target="_blank">
-        Contrato Padrão
-    </a>
-
-    <a href="contrato_felipe_pdf.php?id=<?= $c['id'] ?>" target="_blank">
-        Contrato Jurídico
-    </a>
-
-    <a href="contratos.php?delete=<?= $c['id'] ?>"
-       onclick="return confirm('Deseja excluir este contrato?')">
-       Excluir
-    </a>
+<a href="contratos.php?edit=<?= $c['id'] ?>">Editar</a>
+<a href="contrato_pdf.php?id=<?= $c['id'] ?>" target="_blank">Modelo 1</a>
+<a href="contrato_modelo2_pdf.php?id=<?= $c['id'] ?>" target="_blank">Modelo 2</a>
 </td>
 </tr>
 <?php endforeach; ?>
