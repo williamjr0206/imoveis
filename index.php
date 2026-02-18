@@ -55,9 +55,6 @@ if (!isset($_SESSION['usuario_id'])) {
     <a href="cadastros/inquilinos.php">👥 Inquilinos</a>
     <a href="cadastros/contratos.php">📄 Contratos</a>
     <a href="cadastros/pagamentos.php">💰 Pagamentos</a>
-</div>
-
-<div class="logout">
     <a href="logout.php">🚪 Sair</a>
 </div>
 
