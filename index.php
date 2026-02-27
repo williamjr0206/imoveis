@@ -50,12 +50,12 @@ if (!isset($_SESSION['usuario_id'])) {
         <a href="cadastros/usuarios.php">👤 Usuários</a>
     <?php endif; ?>
 
-    <a href="cadastros/proprietarios.php">🏠 Proprietários</a>
-    <a href="cadastros/imoveis.php">🏢 Imóveis</a>
-    <a href="cadastros/inquilinos.php">👥 Inquilinos</a>
-    <a href="cadastros/contratos.php">📄 Contratos</a>
-    <a href="cadastros/pagamentos.php">💰 Pagamentos</a>
-    <a href="logout.php">🚪 Sair</a>
+    <a href="<?= BASE_URL ?>cadastros/proprietarios.php">🏠 Proprietários</a>
+    <a href="<?= BASE_URL ?>cadastros/imoveis.php">🏢 Imóveis</a>
+    <a href="<?= BASE_URL ?>cadastros/inquilinos.php">👥 Inquilinos</a>
+    <a href="<?= BASE_URL ?>cadastros/contratos.php">📄 Contratos</a>
+    <a href="<?= BASE_URL ?>cadastros/pagamentos.php">💰 Pagamentos</a>
+    <a href="<?= BASE_URL ?>logout.php">🚪 Sair</a>
 </div>
 
 </body>
