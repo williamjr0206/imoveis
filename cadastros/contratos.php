@@ -227,6 +227,7 @@ a { margin-right: 8px; }
 <a href="contratos.php?edit=<?= $c['id'] ?>">Editar</a>
 <a href="contrato_pdf.php?id=<?= $c['id'] ?>" target="_blank">Modelo 1</a>
 <a href="contrato_modelo2_pdf.php?id=<?= $c['id'] ?>" target="_blank">Modelo 2</a>
+<a href="contrato_modelo3_pdf.php?id=<?= $c['id'] ?>" target="_blank">Modelo 3</a>
 </td>
 </tr>
 <?php endforeach; ?>
