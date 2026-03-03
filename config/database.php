@@ -1,6 +1,11 @@
 <?php
 $hostAtual = $_SERVER['HTTP_HOST'] ?? '';
-define('BASE_URL', '/imoveis/');
+
+$protocolo = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? "https://" : "http://";
+$host = $_SERVER['HTTP_HOST'];
+$pastaProjeto = '/imoveis/'; // só mude isso se mudar o nome da pasta
+
+define('BASE_URL', $protocolo . $host . $pastaProjeto);
 $ambiente = (
     $hostAtual === 'localhost' ||
     $hostAtual === 'localhost'
