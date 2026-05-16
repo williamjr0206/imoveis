@@ -196,9 +196,10 @@ while ($row = $result->fetch_assoc()) {
     <td>R$ <?= number_format($p['valor_pago'], 2, ',', '.') ?></td>
     <td><?= date('d/m/Y', strtotime($p['data_pagamento'])) ?></td>
     <td>
-        <a href="?edit=<?= $p['id'] ?>">Editar</a> |
-        <a href="?delete=<?= $p['id'] ?>"
-           onclick="return confirm('Excluir pagamento?')">Excluir</a>
+<a href="?edit=<?= $p['id'] ?>">Editar</a> |
+<a href="?delete=<?= $p['id'] ?>"
+   onclick="return confirm('Excluir pagamento?')">Excluir</a> |
+<a href="../relatorios/recibo.php?id=<?= $p['id'] ?>" target="_blank">Recibo PDF</a>
     </td>
 </tr>
 <?php endforeach; ?>

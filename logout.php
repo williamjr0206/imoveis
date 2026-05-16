@@ -1,12 +1,8 @@
 <?php
 session_start();
-
-// limpa todas as variáveis de sessão
-$_SESSION = [];
-
-// destrói a sessão
 session_destroy();
 
-// redireciona para o login
+require __DIR__ . '/config/database.php';
+
 header("Location: " . BASE_URL . "login.php");
 exit;

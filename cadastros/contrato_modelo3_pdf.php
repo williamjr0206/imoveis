@@ -132,13 +132,24 @@ $pdf->MultiCell(0,5,utf8_decode($clausulas));
 
 $pdf->Ln(15);
 
-$pdf->Cell(0,5,"______________________________________________",0,1);
-$pdf->Cell(0,5,"JOSE KAISER AZEVEDO",0,1);
+// ASSINATURAS
+$pdf->Ln(15);
 
-$pdf->Ln(10);
+// LOCADOR 1
+$pdf->Cell(0,5,"______________________________________________",0,1,'C');
+$pdf->Cell(0,5,"JOSE KAISER AZEVEDO",0,1,'C');
 
-$pdf->Cell(0,5,"______________________________________________",0,1);
-$pdf->Cell(0,5,utf8_decode($d['inquilino_nome']),0,1);
+$pdf->Ln(8);
+
+// LOCADOR 2
+$pdf->Cell(0,5,"______________________________________________",0,1,'C');
+$pdf->Cell(0,5,"PAULO ROBERTO AZEVEDO",0,1,'C');
+
+$pdf->Ln(12);
+
+// LOCATÁRIO
+$pdf->Cell(0,5,"______________________________________________",0,1,'C');
+$pdf->Cell(0,5,utf8_decode($d['inquilino_nome']),0,1,'C');
 
 $pdf->Output('I', 'contrato_modelo3.pdf');
 ob_end_flush();
