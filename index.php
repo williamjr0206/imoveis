@@ -1,14 +1,15 @@
 <?php
 session_start();
 
-require __DIR__ . '/config/database.php';
-require __DIR__ . '/config/auth.php';
 
 // garante que está logado
 if (!isset($_SESSION['usuario_id'])) {
     header("Location: login.php");
     exit;
 }
+require __DIR__ . '/config/database.php';
+require __DIR__ . '/config/auth.php';
+
 ?>
 <!DOCTYPE html>
 <html lang="pt-br">

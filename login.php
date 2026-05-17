@@ -11,7 +11,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $stmt = $conn->prepare(
         "SELECT id, nome, perfil, senha
          FROM usuarios
-         WHERE email = ? AND ativo = 1"
+         WHERE email = ?"
     );
 
     $stmt->bind_param("s", $email);
