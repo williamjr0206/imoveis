@@ -8,6 +8,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $email = $_POST['email'] ?? '';
     $senha = $_POST['senha'] ?? '';
 
+
     $stmt = $conn->prepare(
         "SELECT id, nome, perfil, senha
          FROM usuarios
