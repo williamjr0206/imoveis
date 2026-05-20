@@ -1,0 +1,59 @@
+* {
+    box-sizing: border-box;
+}
+
+body {
+    font-family: Arial, sans-serif;
+    margin: 12px;
+    font-size: 16px;
+}
+
+input,
+select,
+textarea,
+button {
+    width: 100%;
+    max-width: 100%;
+    padding: 10px;
+    margin: 6px 0;
+    font-size: 16px;
+}
+
+button {
+    cursor: pointer;
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.table-responsive {
+    width: 100%;
+    overflow-x: auto;
+}
+
+th,
+td {
+    padding: 8px;
+    font-size: 14px;
+}
+
+@media (max-width: 768px) {
+    body {
+        margin: 8px;
+    }
+
+    h1, h2, h3 {
+        font-size: 20px;
+    }
+
+    table {
+        min-width: 800px;
+    }
+
+    a {
+        display: inline-block;
+        margin: 4px 0;
+    }
+}

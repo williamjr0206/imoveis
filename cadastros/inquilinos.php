@@ -129,6 +129,8 @@ function togglePessoa() {
 }
 </script>
 </head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0" charset="UTF-8">
+<link rel="stylesheet" href="../assets/css/mobile.css">
 <body>
 
 <h2><?= $editar ? 'Editar Inquilino' : 'Novo Inquilino' ?></h2>
