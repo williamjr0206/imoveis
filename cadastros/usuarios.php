@@ -5,7 +5,6 @@ error_reporting(E_ALL);
 
 require __DIR__ . '/../config/database.php';
 require __DIR__ . '/../config/auth.php';
-require __DIR__ . '/../includes/menu.php';
 
 verificaPerfil(['ADMIN']);
 
@@ -18,7 +17,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $nome   = $_POST['nome'];
     $email  = $_POST['email'];
     $perfil = $_POST['perfil'];
-    $ativo  = isset($_POST['ativo']) ? 1 : 0;
 
     // senha só é atualizada se for informada
     $senha = !empty($_POST['senha'])
@@ -29,22 +27,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if ($senha) {
             $stmt = $conn->prepare("
                 UPDATE usuarios
-                SET nome = ?, email = ?, perfil = ?, senha = ?, ativo = ?
+                SET nome = ?, email = ?, perfil = ?, senha = ?
                 WHERE id = ?
             ");
             $stmt->bind_param(
-                "ssssii",
+                "ssssi",
                 $nome,
                 $email,
                 $perfil,
                 $senha,
-                $ativo,
                 $id
             );
         } else {
             $stmt = $conn->prepare("
                 UPDATE usuarios
-                SET nome = ?, email = ?, perfil = ?, ativo = ?
+                SET nome = ?, email = ?, perfil = ?
                 WHERE id = ?
             ");
             $stmt->bind_param(
@@ -52,23 +49,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $nome,
                 $email,
                 $perfil,
-                $ativo,
                 $id
             );
         }
     } else {
+        $senha_hash = password_hash($_POST['senha'], PASSWORD_DEFAULT);
+
         $stmt = $conn->prepare("
             INSERT INTO usuarios
-            (nome, email, senha, perfil, ativo)
-            VALUES (?, ?, ?, ?, ?)
+            (nome, email, senha, perfil)
+            VALUES (?, ?, ?, ?)
         ");
         $stmt->bind_param(
             "ssssi",
             $nome,
             $email,
-            password_hash($_POST['senha'], PASSWORD_DEFAULT),
+            $senha_hash,
             $perfil,
-            $ativo
         );
     }
 
@@ -105,7 +102,7 @@ if (isset($_GET['edit'])) {
 ===================== */
 $usuarios = [];
 $result = $conn->query("
-    SELECT id, nome, email, perfil, ativo
+    SELECT id, nome, email, perfil
     FROM usuarios
     ORDER BY nome
 ");
@@ -113,6 +110,8 @@ $result = $conn->query("
 while ($row = $result->fetch_assoc()) {
     $usuarios[] = $row;
 }
+
+require __DIR__ . '/../includes/menu.php';
 ?>
 
 <!DOCTYPE html>
@@ -157,11 +156,6 @@ while ($row = $result->fetch_assoc()) {
         <?php endforeach; ?>
     </select>
 
-    <label>
-        <input type="checkbox" name="ativo"
-            <?= (!isset($editar) || ($editar['ativo'] ?? 1)) ? 'checked' : '' ?>>
-        Ativo
-    </label>
 
     <button type="submit">
         <?= $editar ? 'Atualizar' : 'Salvar' ?>
@@ -188,7 +182,6 @@ while ($row = $result->fetch_assoc()) {
             <td><?= htmlspecialchars($u['nome']) ?></td>
             <td><?= htmlspecialchars($u['email']) ?></td>
             <td><?= $u['perfil'] ?></td>
-            <td><?= $u['ativo'] ? 'Ativo' : 'Inativo' ?></td>
             <td>
                 <a href="usuarios.php?edit=<?= $u['id'] ?>">Editar</a>
 

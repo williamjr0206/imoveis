@@ -4,7 +4,6 @@ error_reporting(E_ALL);
 
 require __DIR__ . '/../config/database.php';
 require __DIR__ . '/../config/auth.php';
-require __DIR__ . '/../includes/menu.php';
 
 verificaPerfil(['ADMIN', 'OPERADOR']);
 
@@ -270,6 +269,8 @@ $result = $conn->query("
 while ($row = $result->fetch_assoc()) {
     $pagamentos[] = $row;
 }
+
+require __DIR__ . '/../includes/menu.php';
 ?>
 
 <h2>Pagamentos</h2>

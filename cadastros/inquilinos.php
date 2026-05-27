@@ -4,7 +4,6 @@ error_reporting(E_ALL);
 
 require __DIR__ . '/../config/database.php';
 require __DIR__ . '/../config/auth.php';
-require __DIR__ . '/../includes/menu.php';
 
 verificaPerfil(['ADMIN','OPERADOR']);
 
@@ -35,7 +34,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($id) {
         $stmt = $conn->prepare("
             UPDATE inquilinos
-            SET tipo_pessoa = ?, nome = ?, cpf = ?, cnpj = ?, 
+            SET tipo_pessoa = ?, nome = ?, cpf = ?, cnpj, 
                 representante_nome = ?, representante_cpf = ?, endereco = ?
             WHERE id = ?
         ");
@@ -106,6 +105,8 @@ $result = $conn->query("SELECT * FROM inquilinos ORDER BY nome");
 while ($row = $result->fetch_assoc()) {
     $inquilinos[] = $row;
 }
+
+require __DIR__ . '/../includes/menu.php';
 ?>
 
 <!DOCTYPE html>

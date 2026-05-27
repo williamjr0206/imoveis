@@ -2,10 +2,8 @@
 ini_set('display_errors', 1);
 error_reporting(E_ALL);
 
-
 require __DIR__ . '/../config/database.php';
 require __DIR__ . '/../config/auth.php';
-require __DIR__ . '/../includes/menu.php';
 
 verificaPerfil(['ADMIN','OPERADOR']);
 
@@ -275,6 +273,8 @@ $contratos = $conn->query("
     JOIN proprietarios p ON p.id = i.proprietario_id
     ORDER BY c.data_inicio DESC
 ")->fetch_all(MYSQLI_ASSOC);
+
+require __DIR__ . '/../includes/menu.php';
 ?>
 
 <!DOCTYPE html>

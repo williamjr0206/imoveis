@@ -4,7 +4,6 @@ error_reporting(E_ALL);
 
 require __DIR__ . '/../config/database.php';
 require __DIR__ . '/../config/auth.php';
-require __DIR__ . '/../includes/menu.php';
 
 verificaPerfil(['ADMIN','OPERADOR']);
 
@@ -35,6 +34,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
     $stmt->execute();
+
     header("Location: proprietarios.php");
     exit;
 }
@@ -77,6 +77,8 @@ if ($result) {
         $proprietarios[] = $row;
     }
 }
+
+require __DIR__ . '/../includes/menu.php';
 ?>
 
 <!DOCTYPE html>

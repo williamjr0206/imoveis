@@ -1,8 +1,6 @@
 <?php
 require __DIR__ . '/../config/database.php';
 require __DIR__ . '/../config/auth.php';
-require __DIR__ . '/../includes/menu.php';
-
 
 verificaPerfil(['ADMIN','OPERADOR']);
 
@@ -17,43 +15,42 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $tipo            = $_POST['tipo'];
     $endereco        = $_POST['endereco'];
     $valor_aluguel   = $_POST['valor_aluguel'];
-    $status = $_POST['status'];
-
+    $status          = $_POST['status'];
 
     if ($id) {
         // EDITAR
-$stmt = $conn->prepare("
-    UPDATE imoveis
-    SET proprietario_id = ?, descricao = ?, tipo = ?, endereco = ?, valor_aluguel = ?, status = ?
-    WHERE id = ?
-");
-$stmt->bind_param(
-    "isssdsi",
-    $proprietario_id,
-    $descricao,
-    $tipo,
-    $endereco,
-    $valor_aluguel,
-    $status,
-    $id
-);
-$stmt->execute();
+        $stmt = $conn->prepare("
+            UPDATE imoveis
+            SET proprietario_id = ?, descricao = ?, tipo = ?, endereco = ?, valor_aluguel = ?, status = ?
+            WHERE id = ?
+        ");
+        $stmt->bind_param(
+            "isssdsi",
+            $proprietario_id,
+            $descricao,
+            $tipo,
+            $endereco,
+            $valor_aluguel,
+            $status,
+            $id
+        );
+        $stmt->execute();
     } else {
         // SALVAR
-$stmt = $conn->prepare("
-    INSERT INTO imoveis
-    (proprietario_id, descricao, tipo, endereco, valor_aluguel, status)
-    VALUES (?, ?, ?, ?, ?, ?)
-");
-$stmt->bind_param(
-    "isssds",
-    $proprietario_id,
-    $descricao,
-    $tipo,
-    $endereco,
-    $valor_aluguel,
-    $status
-);
+        $stmt = $conn->prepare("
+            INSERT INTO imoveis
+            (proprietario_id, descricao, tipo, endereco, valor_aluguel, status)
+            VALUES (?, ?, ?, ?, ?, ?)
+        ");
+        $stmt->bind_param(
+            "isssds",
+            $proprietario_id,
+            $descricao,
+            $tipo,
+            $endereco,
+            $valor_aluguel,
+            $status
+        );
         $stmt->execute();
     }
 
@@ -110,6 +107,8 @@ $result = $conn->query("
 while ($row = $result->fetch_assoc()) {
     $imoveis[] = $row;
 }
+
+require __DIR__ . '/../includes/menu.php';
 ?>
 
 <!DOCTYPE html>
